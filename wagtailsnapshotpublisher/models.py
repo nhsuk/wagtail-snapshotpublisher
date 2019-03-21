@@ -41,10 +41,10 @@ class WSSPContentRelease(ContentRelease):
         verbose_name = 'Releases'
 
 
-class ModelWithRelease(models.Model):
+class WithRelease(models.Model):
     content_release = models.ForeignKey(
         WSSPContentRelease,
-        related_name='model_content_release',
+        related_name='%(class)s_content_release',
         blank=True,
         null=True,
         default=None,
@@ -54,27 +54,34 @@ class ModelWithRelease(models.Model):
     class Meta:
         abstract = True
 
+    def get_key(self):
+        return self.id
+
     def get_name_slug(self):
         if hasattr(self.__class__, 'slug_name') and self.__class__.slug_name:
             return self.slug_name
         s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', self.__class__.__name__)
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
-    def save(self, *args, **kwargs):
+    def publish_to_release(self, instance=None, content_release=None):
+        if not instance:
+            instance = self
+
+        if not content_release:
+            content_release = self.content_release
+        
         object_dict = {key: value  for key, value in model_to_dict(self).items() if key in self.__class__.fields_to_store}
 
         publisher_api = PublisherAPI()
         response = publisher_api.publish_document_to_content_release(
-            self.content_release.site_code,
-            self.content_release.uuid,
+            content_release.site_code,
+            content_release.uuid,
             json.dumps(object_dict),
-            self.id,
+            self.get_key(),
             self.get_name_slug(),
         )
 
-        super().save(*args, **kwargs)
-    
-    def unpublish(self, release_id=None):
+    def unpublish_from_release(self, release_id=None):
         if not release_id:
             pass
         else:
@@ -83,23 +90,28 @@ class ModelWithRelease(models.Model):
             reponse = publisher_api.unpublish_document_from_content_release(
                 content_release.site_code,
                 content_release.uuid,
-                self.id,
+                self.get_key(),
                 self.get_name_slug(),
             )
 
 
-class PageWithRelease(Page):
-    content_release = models.ForeignKey(
-        WSSPContentRelease,
-        related_name='page_content_release',
-        blank=True,
-        null=True,
-        default=None,
-        on_delete=models.SET_NULL,
-        limit_choices_to={'status': 0})
+class ModelWithRelease(WithRelease):
 
     class Meta:
         abstract = True
+
+    def save(self, *args, **kwargs):
+        self.publish_to_release()
+        super().save(*args, **kwargs)
+
+
+class PageWithRelease(Page, WithRelease):
+
+    class Meta:
+        abstract = True
+    
+    def get_name_slug(self):
+        return 'page'
 
     def save_revision(self, user=None, submitted_for_moderation=False, approved_go_live_at=None, changed=True):
         assigned_release = self.content_release
@@ -112,28 +124,6 @@ class PageWithRelease(Page):
                 pass
             else:
                 page = revision.as_page_object()
-                page_dict = {key: value  for key, value in model_to_dict(page).items() if key in self.__class__.fields_to_store}
-
-                publisher_api = PublisherAPI()
-                publisher_api.publish_document_to_content_release(
-                    assigned_release.site_code,
-                    assigned_release.uuid,
-                    json.dumps(page_dict),
-                    self.id,
-                    'page',
-                )
+                self.publish_to_release(page, assigned_release)
 
         return revision
-
-    def unpublish(self, release_id=None):
-        if not release_id:
-            pass
-        else:
-            content_release = WSSPContentRelease.objects.get(id=release_id)
-            publisher_api = PublisherAPI()
-            reponse = publisher_api.unpublish_document_from_content_release(
-                content_release.site_code,
-                content_release.uuid,
-                self.id,
-                'page',
-            )
