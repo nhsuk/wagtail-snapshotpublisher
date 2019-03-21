@@ -28,7 +28,7 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'wagtailsnapshotpublisher',
-    'dummy_page',
+    'test_page',
 
     'wagtail.contrib.forms',
     'wagtail.contrib.redirects',

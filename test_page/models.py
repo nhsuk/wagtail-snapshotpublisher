@@ -9,7 +9,7 @@ from wagtail.snippets.models import register_snippet
 from wagtailsnapshotpublisher.models import PageWithRelease, ModelWithRelease
 
 
-class CustomPage(PageWithRelease):
+class TestPage(PageWithRelease):
     content_panels = Page.content_panels + [
         FieldPanel('content_release'),
     ]
@@ -17,7 +17,7 @@ class CustomPage(PageWithRelease):
     fields_to_store = ['title']
 
 
-class SiteSettings(ModelWithRelease):
+class TestModel(ModelWithRelease):
     name = models.CharField(max_length=255)
 
     panels = [
@@ -27,8 +27,9 @@ class SiteSettings(ModelWithRelease):
 
     fields_to_store = ['name']
 
+    def get_key(self):
+        return 'test_model'
+
     def __str__(self):
         return self.name
 
-    class Meta:
-        verbose_name = 'TEST'

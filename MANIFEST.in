@@ -1,4 +1,4 @@
 graft wagtailsnapshotpublisher
-prune dummy_page
+prune test_page
 prune config
 global-exclude __pycache__/*

@@ -8,11 +8,11 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='wagtail-snapshotpublisher',
-    version='0.1',
+    version=__VERSION__,
     packages=find_packages(),
     include_package_data=True,
     license='MIT',
-    url='https://github.com/yohanlebret/wagtail-snapshotpublisher'
+    url='https://github.com/yohanlebret/wagtail-snapshotpublisher',
     description='Add Release mechanism from django-snapshotpublisher to wagtail',
     long_description=long_description,
     long_description_content_type='text/markdown',
