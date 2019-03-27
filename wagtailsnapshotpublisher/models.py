@@ -5,13 +5,15 @@ from django import forms
 from django.db import models
 from django.conf import settings
 from django.forms.models import model_to_dict
+from django.http import JsonResponse
 
 from wagtail.admin.edit_handlers import FieldPanel
-from wagtail.core.models import Page
+from wagtail.core.models import Page, PageRevision
 
 from djangosnapshotpublisher.models import ContentRelease
 from djangosnapshotpublisher.publisher_api import PublisherAPI
 
+from .json_encoder import StreamFieldEncoder
 from .panels import ReadOnlyPanel
 
 
@@ -22,12 +24,13 @@ if settings.SITE_CODE_CHOICES:
         choices=settings.SITE_CODE_CHOICES,
     )
 
+
 class WSSPContentRelease(ContentRelease):
 
     panels = [
         ReadOnlyPanel('uuid'),
         FieldPanel('title'),
-        FieldPanel('site_code', widget=site_code_widget),
+        FieldPanel('site_code'),
         FieldPanel('version'),
         FieldPanel('status'),
         FieldPanel('base_release'),
@@ -63,6 +66,41 @@ class WithRelease(models.Model):
         s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', self.__class__.__name__)
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
+
+    @classmethod
+    def document_parser(cls, item, schema, model_as_dict):
+        # get fields and data
+        object_dict = {key: value  for key, value in model_as_dict.items() if key in schema['fields']}
+
+        # get related fields and data
+        if 'related_fields' in schema:
+            for related_field in schema['related_fields']:
+                related_field_data = getattr(item, 'test_related_model').all()
+                if related_field_data.exists():
+                    if related_field_data.count() > 1:
+                        object_dict.update(
+                            {
+                                related_field: [cls.document_parser(related_item, related_item.__class__.structure_to_store, model_to_dict(related_item)) for related_item in related_field_data.all()]
+                            }
+                        )
+                    else:
+                        related_item = related_field_data.first()
+                        object_dict.update(
+                            {
+                                related_field: cls.document_parser(related_item, related_item.__class__.structure_to_store, model_to_dict(related_item))
+                            }
+                        )
+
+        # get children
+        if 'children' in schema:
+            for schema_child in schema['children']:
+                object_dict.update(
+                    {schema_child['name']: cls.document_parser(item, schema_child, model_as_dict)}
+                )
+
+        return object_dict
+
+
     def publish_to_release(self, instance=None, content_release=None):
         if not instance:
             instance = self
@@ -70,13 +108,13 @@ class WithRelease(models.Model):
         if not content_release:
             content_release = self.content_release
         
-        object_dict = {key: value  for key, value in model_to_dict(self).items() if key in self.__class__.fields_to_store}
+        object_dict = self.__class__.document_parser(self, self.__class__.structure_to_store, model_to_dict(self))
 
         publisher_api = PublisherAPI()
         response = publisher_api.publish_document_to_content_release(
             content_release.site_code,
             content_release.uuid,
-            json.dumps(object_dict),
+            json.dumps(object_dict, cls=StreamFieldEncoder),
             self.get_key(),
             self.get_name_slug(),
         )
@@ -127,3 +165,8 @@ class PageWithRelease(Page, WithRelease):
                 self.publish_to_release(page, assigned_release)
 
         return revision
+
+
+    def serve_preview(self, request, mode_name):
+        object_dict = self.__class__.document_parser(self.specific, self.specific.__class__.structure_to_store, model_to_dict(self.specific))
+        return JsonResponse(object_dict, encoder=StreamFieldEncoder)
