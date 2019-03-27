@@ -1,4 +1,6 @@
 import json
+from jsonschema import validate
+from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 
 from django.contrib.auth.models import User
 from django.test import Client
@@ -9,7 +11,7 @@ from wagtail.tests.utils import WagtailPageTests
 from djangosnapshotpublisher.models import ReleaseDocument
 from wagtailsnapshotpublisher.models import WSSPContentRelease
 
-from test_page.models import TestModel, TestPage
+from test_page.models import TestModel, TestPage, TestRelatedModel
 
 
 class ModelWithReleaseTests(WagtailPageTests):
@@ -28,7 +30,8 @@ class ModelWithReleaseTests(WagtailPageTests):
 
         # Create TestModel
         self.test_model = TestModel(
-            name='SiteSetting1',
+            name1='Test Name1',
+            name2='Test Name2',
             content_release=self.content_release,
         )
         self.test_model.save()
@@ -51,7 +54,8 @@ class ModelWithReleaseTests(WagtailPageTests):
         self.assertEqual(
             json.loads(release_document.document_json),
             {
-                'name': 'SiteSetting1',
+                'name1': 'Test Name1',
+                'name2': 'Test Name2',
             }
         )
 
@@ -65,7 +69,8 @@ class ModelWithReleaseTests(WagtailPageTests):
         self.assertEqual(response.status_code, 302)
 
         # Update TestModel
-        self.test_model.name = 'SiteSetting2'
+        self.test_model.name1 = 'Test Name3'
+        self.test_model.name2 = 'Test Name4'
         self.test_model.save()
 
         # Republish TestModel to a release
@@ -84,7 +89,8 @@ class ModelWithReleaseTests(WagtailPageTests):
         self.assertEqual(
             json.loads(release_document.document_json),
             {
-                'name': 'SiteSetting2',
+                'name1': 'Test Name3',
+                'name2': 'Test Name4',
             }
         )
 
@@ -142,10 +148,132 @@ class PageWithReleaseTests(WagtailPageTests):
 
         self.test_page = TestPage(
             title='Title1',
+            name1='Test Name1',
+            name2='Test Name2',
+            body=json.dumps([
+                {
+                    'type': 'simple_richtext', 'value': {
+                        'title': 'Simple Rich Text Title',
+                        'body': 'Simple Rich Text Body',
+                    }
+                },
+                {
+                    'type': 'block_list', 'value': {
+                        'title': 'Block List Title',
+                        'body': [
+                            {
+                                'type': 'simple_richtext', 'value': {
+                                    'title': 'Simple Rich Text Title2',
+                                    'body': 'Simple Rich Text Body2',
+                                }
+                            }
+                        ]
+                    }
+                },
+            ]),
             content_release=self.content_release,
         )
         homepage.add_child(instance=self.test_page)
         self.test_page.save()
+
+        # Create TestRelatedModel
+        self.test_related_model = TestRelatedModel(
+            test_page=self.test_page,
+            name='Test Related Name1',
+        )
+        self.test_related_model.save()
+
+        simple_richtext_schema = {
+            'type' : 'object',
+            'required': ['type', 'value'],
+            'properties' : {
+                'type': {'type' : 'string'},
+                'id': {
+                    'type' : 'string',
+                    'pattern': '^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$'
+                },
+                'value': {
+                    'type' : 'object',
+                    'required': ['title', 'body'],
+                    'properties' : {
+                        'title': {'type' : 'string'},
+                        'body':{'type' : 'string'},
+                    },
+                },
+            },
+        }
+
+        self.test_page_schema = {
+            'type' : 'object',
+            'required': ['title', 'name1', 'test_related_model', 'child1', 'child3', 'body'],
+            'properties' : {
+                'title' : {'type' : 'string'},
+                'name1' : {'type' : 'string'},
+                'test_related_model': {
+                    'type' : 'object',
+                    'required': ['name'],
+                    'properties' : {
+                        'name': {'type' : 'string'},
+                    },
+                },
+                'child1': {
+                    'type' : 'object',
+                    'required': ['name1', 'test_related_model', 'child2'],
+                    'properties' : {
+                        'name1': {'type' : 'string'},
+                        'test_related_model': {
+                            'type' : 'object',
+                            'required': ['name'],
+                            'properties' : {
+                                'name': {'type' : 'string'},
+                            }
+                        },
+                        'child2': {
+                            'type' : 'object',
+                            'required': ['name2'],
+                            'properties' : {
+                                'name2': {'type' : 'string'},
+                            }
+                        },
+                    },
+                },
+                'child3':{
+                    'type' : 'object',
+                    'required': ['name2'],
+                    'properties' : {
+                        'name2': {'type' : 'string'},
+                    },
+                },
+                'body':{
+                    'type' : 'array',
+                    "items": [
+                        simple_richtext_schema,
+                        {
+                            'type' : 'object',
+                            'required': ['type', 'id', 'value'],
+                            'properties' : {
+                                'type': {'type' : 'string'},
+                                'id': {
+                                    'type' : 'string',
+                                    'pattern': '^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$'
+                                },
+                                'value': {
+                                    'type' : 'object',
+                                    'required': ['title', 'body'],
+                                    'properties' : {
+                                        'title': {'type' : 'string'},
+                                        'body':{
+                                            'type' : 'array',
+                                            'items': simple_richtext_schema,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ]
+                },
+            },
+        }
 
 
     def test_create_then_publish(self):
@@ -158,12 +286,10 @@ class PageWithReleaseTests(WagtailPageTests):
             content_releases=self.content_release,
         )
 
-        self.assertEqual(
-            json.loads(release_document.document_json),
-            {
-                'title': 'Title1',
-            }
-        )
+        try:
+            validate(instance=json.loads(release_document.document_json), schema=self.test_page_schema)
+        except JsonSchemaValidationError:
+            self.fail('Json schema validation failed')
 
     def test_update_then_publish(self):
         # Publish TestPage to a release
@@ -172,7 +298,35 @@ class PageWithReleaseTests(WagtailPageTests):
         # Update TestPage
         self.test_page.content_release = self.content_release
         self.test_page.title = 'Title2'
+        self.test_page.name1 = 'Test Name3'
+        self.test_page.name2 = 'Test Name4'
+        self.test_page.body=json.dumps([
+            {
+                'type': 'simple_richtext', 'value': {
+                    'title': 'Simple Rich Text Title3',
+                    'body': 'Simple Rich Text Body3',
+                }
+            },
+            {
+                'type': 'block_list', 'value': {
+                    'title': 'Block List Title2',
+                    'body': [
+                        {
+                            'type': 'simple_richtext', 'value': {
+                                'title': 'Simple Rich Text Title4',
+                                'body': 'Simple Rich Text Body4',
+                            }
+                        }
+                    ]
+                }
+            },
+        ])
         self.test_page.save()
+        
+
+        # Update TestRelatedModel
+        self.test_related_model.name = 'Test Related Name2'
+        self.test_related_model.save()
 
         # Republish TestPage to a release
         self.test_page.save_revision(self.user)
@@ -183,12 +337,25 @@ class PageWithReleaseTests(WagtailPageTests):
             content_releases=self.content_release,
         )
 
-        self.assertEqual(
-            json.loads(release_document.document_json),
-            {
-                'title': 'Title2',
-            }
-        )
+        document = json.loads(release_document.document_json)
+        try:
+            validate(instance=document, schema=self.test_page_schema)
+        except JsonSchemaValidationError:
+            self.fail('Json schema validation failed')
+
+        self.assertEqual(document['title'], 'Title2')
+        self.assertEqual(document['name1'], 'Test Name3')
+        self.assertEqual(document['child3']['name2'], 'Test Name4')
+        self.assertEqual(document['test_related_model']['name'], 'Test Related Name2')
+        self.assertEqual(document['body'][0]['type'], 'simple_richtext')
+        self.assertEqual(document['body'][0]['value']['title'], 'Simple Rich Text Title3')
+        self.assertEqual(document['body'][0]['value']['body'], 'Simple Rich Text Body3')
+        self.assertEqual(document['body'][1]['type'], 'block_list')
+        self.assertEqual(document['body'][1]['value']['title'], 'Block List Title2')
+
+        self.assertEqual(document['body'][1]['value']['body'][0]['type'], 'simple_richtext')
+        self.assertEqual(document['body'][1]['value']['body'][0]['value']['title'], 'Simple Rich Text Title4')
+        self.assertEqual(document['body'][1]['value']['body'][0]['value']['body'], 'Simple Rich Text Body4')
 
     def test_update_unpublish(self):
         # Publish TestPage to a release
