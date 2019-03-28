@@ -6,8 +6,9 @@ from django.db import models
 from django.conf import settings
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
+from django.utils.translation import gettext_lazy as _
 
-from wagtail.admin.edit_handlers import FieldPanel
+from wagtail.admin.edit_handlers import FieldPanel, MultiFieldPanel, HelpPanel
 from wagtail.core.models import Page, PageRevision
 
 from djangosnapshotpublisher.models import ContentRelease
@@ -28,13 +29,25 @@ if settings.SITE_CODE_CHOICES:
 class WSSPContentRelease(ContentRelease):
 
     panels = [
-        ReadOnlyPanel('uuid'),
-        FieldPanel('title'),
-        FieldPanel('site_code'),
-        FieldPanel('version'),
-        FieldPanel('status'),
-        FieldPanel('base_release'),
-        FieldPanel('publish_datetime'),
+        MultiFieldPanel(
+            [
+                FieldPanel('site_code', widget=site_code_widget),
+                ReadOnlyPanel('uuid'),
+                FieldPanel('status'),
+                FieldPanel('title'),
+                FieldPanel('version'),
+            ],
+            heading='General',
+        ),
+        MultiFieldPanel(
+            [
+                FieldPanel('use_current_live_as_base_release'),
+                FieldPanel('base_release'),
+                FieldPanel('publish_datetime'),
+                HelpPanel(_('If you active the current live release, the base release will be ignore')),
+            ],
+            heading='Publishing',
+        )
     ]
 
     def __str__(self):
@@ -42,6 +55,20 @@ class WSSPContentRelease(ContentRelease):
 
     class Meta:
         verbose_name = 'Releases'
+
+    @classmethod
+    def get_panel_field(cls, field_name):
+        panels = cls.panels
+        return cls.get_panel_field_from_panels(panels, field_name)
+
+    @classmethod
+    def get_panel_field_from_panels(cls, panels, field_name):
+        for i in range(len(panels)):
+            if hasattr(panels[i], 'field_name') and panels[i].field_name == field_name:
+                return(panels[i])
+            if hasattr(panels[i], 'children'):
+                return cls.get_panel_field_from_panels(panels[i].children, field_name)
+        return None
 
 
 class WithRelease(models.Model):

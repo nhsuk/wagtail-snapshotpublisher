@@ -119,13 +119,8 @@ def update_site_code_for_content_release(sender, instance, **kwargs):
         choices=tuple(SiteSettings.objects.exclude(title='').values_list('title', 'title')),
     )
 
-    site_code_index = None
-    for i in range(len(WSSPContentRelease.panels)):
-        if hasattr(WSSPContentRelease.panels[i], 'field_name') and WSSPContentRelease.panels[i].field_name == 'site_code':
-            site_code_index = i
-            break
-    
-    WSSPContentRelease.panels[site_code_index].widget = site_code_widget
+    WSSPContentRelease.get_panel_field('site_code').widget = site_code_widget
+
 
 try:
     update_site_code_for_content_release(SiteSettings, None)
