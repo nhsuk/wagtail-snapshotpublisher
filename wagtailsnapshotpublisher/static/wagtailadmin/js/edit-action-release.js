@@ -5,18 +5,19 @@ $(function() {
         $("#wssp-action-publish-release").click(function (e) {
             $('#id_content_release').val($('#id_content_release_publish').val());
             $('#id_content_release').closest("form").submit();
-            // $("#page-edit-form").submit();
         });
 
         //unpublish action
         $("#wssp-action-unpublish-release").click(function (e) {
-            // window.removeEventListener('beforeunload', function() {});
-
-            // e.preventDefault();
+            e.preventDefault();
             const releaseId = $('#id_content_release_unpublish').val()
+            console.log($('#unpublished_recursively').is(':checked'));
             const editFormAction = $('#id_content_release').closest("form").attr('action');
-            const unpublishFormAction = editFormAction.replace('/edit/', `/unpublish/${releaseId}/`);
-            window.location.href = unpublishFormAction;
+            let unpublishUrl = editFormAction.replace('/edit/', `/unpublish/${releaseId}/`);
+            if($('#unpublished_recursively').is(':checked')){
+                unpublishUrl += 'recursively/'
+            }
+            window.location.href = unpublishUrl;
         });
     }
 
@@ -30,10 +31,31 @@ $(function() {
         releasePopUp.append(`<h2>${title}</h2>`);
         
         //add a copy of the content_release dropdown to the popup
-        let select_ontent_release = $('#id_content_release').clone()
+        let select_ontent_release = $("#id_content_release").clone()
         select_ontent_release.attr("id", `id_content_release_${action}`);
         select_ontent_release.appendTo(releasePopUp);
         select_ontent_release.val(0);
+
+        if(action == "unpublish") {
+            let unpublished_recursively = $("<div />", {
+                    "class": "field boolean_field checkbox_input",
+                }
+            );
+            unpublished_recursively.append(
+                $("<label />", {
+                        "for": "unpublished_recursively",
+                        "text": "Unpublished all sub pages",
+                    }
+                ),
+                $("<input />", {
+                        "type": "checkbox",
+                        "id": "unpublished_recursively",
+                        "name": "unpublished_recursively",
+                    }
+                ),
+            );
+            releasePopUp.append(unpublished_recursively);
+        }
 
         //add submit and cancel button to the popup
         releasePopUp.append(`<button id="${id}" class="button">${submitBtnCopy}</button>`);

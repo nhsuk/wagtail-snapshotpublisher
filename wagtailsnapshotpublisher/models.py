@@ -146,10 +146,16 @@ class WithRelease(models.Model):
             self.get_name_slug(),
         )
 
-    def unpublish_from_release(self, release_id=None):
+    def unpublish_from_release(self, release_id=None, recursively=False):
         if not release_id:
             pass
         else:
+            if recursively:
+                for child_page in self.get_children():
+                    try:
+                        child_page.specific.unpublish_from_release(release_id, recursively)
+                    except AttributeError:
+                        pass
             content_release = WSSPContentRelease.objects.get(id=release_id)
             publisher_api = PublisherAPI()
             reponse = publisher_api.unpublish_document_from_content_release(
@@ -158,6 +164,7 @@ class WithRelease(models.Model):
                 self.get_key(),
                 self.get_name_slug(),
             )
+        
 
 
 class ModelWithRelease(WithRelease):

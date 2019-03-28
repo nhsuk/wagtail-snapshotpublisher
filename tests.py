@@ -144,7 +144,7 @@ class PageWithReleaseTests(WagtailPageTests):
         self.content_release.save()
 
         # Create TestPage
-        homepage = Page.objects.get(id=1)
+        self.homepage = Page.objects.get(id=1)
 
         self.test_page = TestPage(
             title='Title1',
@@ -173,7 +173,7 @@ class PageWithReleaseTests(WagtailPageTests):
             ]),
             content_release=self.content_release,
         )
-        homepage.add_child(instance=self.test_page)
+        self.homepage.add_child(instance=self.test_page)
         self.test_page.save()
 
         # Create TestRelatedModel
@@ -377,4 +377,37 @@ class PageWithReleaseTests(WagtailPageTests):
                 content_type=self.test_page.get_name_slug(),
                 content_releases=self.content_release,
             ).exists()
+        )
+
+    def test_unpublish_recursively(self):
+        # -homepage
+        #  |-test_page
+        #    |-test_page2
+        #      |-test_page3
+        #  |-test_page1
+        test_page1 = self.test_page.copy(False, self.homepage, {'slug': 'test_page1'})
+        test_page2 = self.test_page.copy(False, self.test_page)
+        test_page3 = self.test_page.copy(False, test_page2)
+
+        self.test_page.save_revision(self.user)
+        test_page1.save_revision(self.user)
+        test_page2.save_revision(self.user)
+        test_page3.save_revision(self.user)
+
+        self.assertEqual(ReleaseDocument.objects.count(), 4)
+
+        # Unpublish TestPage recursively to a release
+        c = Client()
+        response = c.post(
+            '/admin/pages/{}/unpublish/{}/recursively/'.format(
+                self.test_page.id,
+                self.content_release.id,
+            ),
+        )
+
+        self.assertEqual(ReleaseDocument.objects.count(), 1)
+
+        ReleaseDocument.objects.get(
+            document_key=test_page1.get_key(),
+            content_type=test_page1.get_name_slug(),
         )
