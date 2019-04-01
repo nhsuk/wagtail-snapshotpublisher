@@ -18,4 +18,50 @@
             </li>
         </ul>
     </div>
+
+    {% if 'content_release' in form.fields %}
+        <li class="preview">
+            <button class="button action-model-preview icon icon-view" data-submit="{% url 'wagtailsnapshotpublisher_custom_admin:preview-model-admin' instance.get_app instance.get_class instance.id %}" data-auto-update="false">Preview</button>
+        </li>
+
+
+        <script>
+            let preview = false;
+
+            $(".action-model-preview").click(function (e) {
+                preview = true
+                e.preventDefault();
+                $(this).closest("form").submit();
+            });
+
+            $('form').on('submit', function() {
+                const form = $(this);
+                const form_target = $(this).attr("action");
+                if(preview) {
+                    preview = false;
+                    var formdata = new FormData(this);
+                    $.ajax({
+                        url: $(".action-model-preview").data("submit"),
+                        data: formdata,
+                        processData: false,
+                        contentType: false,
+                        type: "POST",
+                        dataType: "text",
+                        success: function (){
+                            form.attr("action", $(".action-model-preview").data("submit"));
+                            form.attr("target", "_blank");
+                            form.submit();
+                            form.attr("action", form_target);
+                            form.attr("target", "");
+                        },
+                        error: function (){
+                            form.submit()
+                        }
+                    });
+                    return false;
+                }
+            });
+        </script>
+    {% endif %}
 {% endblock %}
+
