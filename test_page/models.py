@@ -4,9 +4,11 @@ from django.db import models
 from django.db.models.signals import post_save, post_delete
 from django.db.utils import ProgrammingError
 from django.dispatch import receiver
+from django.forms.models import model_to_dict
 
 from wagtail.admin.edit_handlers import FieldPanel, StreamFieldPanel, InlinePanel
 from wagtail.api import APIField
+from wagtail.contrib.redirects.models import Redirect
 from wagtail.contrib.settings.models import BaseSetting, register_setting
 from wagtail.core import blocks
 from wagtail.core.fields import StreamField
@@ -16,6 +18,7 @@ from wagtail.snippets.models import register_snippet
 from wagtailsnapshotpublisher.models import PageWithRelease, ModelWithRelease
 
 from wagtail.api import APIField
+
 
 class SimpleRichText(blocks.StructBlock):
     title = blocks.CharBlock(required=True)
@@ -43,7 +46,7 @@ class TestRelatedModel(models.Model):
     ]
 
     structure_to_store = {
-         'fields': ['name'],
+        'fields': ['name'],
     }
 
 
@@ -78,7 +81,7 @@ class TestPage(PageWithRelease):
         }, {
              'name': 'child3',
             'fields': ['name2'],
-        }]
+        }],
     }
 
 
@@ -94,13 +97,37 @@ class TestModel(ModelWithRelease):
 
     structure_to_store = {
         'fields': ['name1', 'name2'],
+        'extra': [
+            {
+                'name': 'redirects',
+                'function': 'get_redirections',
+            },
+        ],
     }
 
     def get_key(self):
         return 'test_model'
 
     def __str__(self):
-        return self.name
+        return '{} - {}'.format(self.name1, self.name2)
+
+    def get_redirections(self):
+        redirects = Redirect.objects.all()
+
+        redirect_objects = []
+
+        for redirect in redirects:
+            redirect_object = model_to_dict(redirect)
+            del(redirect_object['id'])
+            del(redirect_object['site'])
+            if redirect_object['redirect_page']:
+                redirect_object['redirect_link'] = Page.objects.get(id=4).url
+                del(redirect_object['redirect_page'])
+            else:
+                del(redirect_object['redirect_page'])
+            redirect_objects.append(redirect_object)
+        
+        return redirect_objects
 
 
 @register_setting

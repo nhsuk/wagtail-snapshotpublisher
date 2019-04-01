@@ -99,6 +99,12 @@ class WithRelease(models.Model):
         # get fields and data
         object_dict = {key: value  for key, value in model_as_dict.items() if key in schema['fields']}
 
+        if 'extra' in schema:
+            for extra in schema['extra']:
+                object_dict.update({
+                    extra['name']: getattr(item, extra['function'])(),
+                })
+
         # get related fields and data
         if 'related_fields' in schema:
             for related_field in schema['related_fields']:
@@ -164,7 +170,6 @@ class WithRelease(models.Model):
                 self.get_key(),
                 self.get_name_slug(),
             )
-        
 
 
 class ModelWithRelease(WithRelease):
@@ -172,8 +177,15 @@ class ModelWithRelease(WithRelease):
     class Meta:
         abstract = True
 
+    def get_app(self):
+        return self.__class__._meta.app_label
+
+    def get_class(self):
+        return self.__class__.__name__.lower()
+
     def save(self, *args, **kwargs):
-        self.publish_to_release()
+        if self.content_release:
+            self.publish_to_release()
         super().save(*args, **kwargs)
 
 

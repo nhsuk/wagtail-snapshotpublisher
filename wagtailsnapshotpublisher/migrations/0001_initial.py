@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('djangosnapshotpublisher', '0004_auto_20190312_1524'),
+        ('djangosnapshotpublisher', '0004_auto_20190328_1422'),
     ]
 
     operations = [

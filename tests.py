@@ -5,6 +5,7 @@ from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 from django.contrib.auth.models import User
 from django.test import Client
 
+from wagtail.contrib.redirects.models import Redirect
 from wagtail.core.models import Page
 from wagtail.tests.utils import WagtailPageTests
 
@@ -27,6 +28,13 @@ class ModelWithReleaseTests(WagtailPageTests):
             status=0,
         )
         self.content_release.save()
+
+        redirect = Redirect(
+            old_path='/test',
+            is_permanent=True,
+            redirect_link='/test2',
+        )
+        redirect.save()
 
         # Create TestModel
         self.test_model = TestModel(
@@ -56,6 +64,11 @@ class ModelWithReleaseTests(WagtailPageTests):
             {
                 'name1': 'Test Name1',
                 'name2': 'Test Name2',
+                'redirects': [{
+                    'old_path': '/test',
+                    'is_permanent': True,
+                    'redirect_link': '/test2',
+                }]
             }
         )
 
@@ -67,6 +80,14 @@ class ModelWithReleaseTests(WagtailPageTests):
         )
 
         self.assertEqual(response.status_code, 302)
+
+        # Add redirection
+        redirect = Redirect(
+            old_path='/test3',
+            is_permanent=False,
+            redirect_link='/test4',
+        )
+        redirect.save()
 
         # Update TestModel
         self.test_model.name1 = 'Test Name3'
@@ -91,6 +112,15 @@ class ModelWithReleaseTests(WagtailPageTests):
             {
                 'name1': 'Test Name3',
                 'name2': 'Test Name4',
+                'redirects': [{
+                    'old_path': '/test',
+                    'is_permanent': True,
+                    'redirect_link': '/test2',
+                }, {
+                    'old_path': '/test3',
+                    'is_permanent': False,
+                    'redirect_link': '/test4',
+                }]
             }
         )
 
