@@ -54,7 +54,7 @@ class WSSPContentRelease(ContentRelease):
         return '{0} - {1}'.format(self.version, self.title)
 
     class Meta:
-        verbose_name = 'Releases'
+        verbose_name = 'Release'
 
     @classmethod
     def get_panel_field(cls, field_name):

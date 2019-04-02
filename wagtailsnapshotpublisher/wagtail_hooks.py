@@ -14,12 +14,26 @@ from .models import WSSPContentRelease
 
 class ReleaseAdmin(ModelAdmin):
     model = WSSPContentRelease
-    menu_label = 'Release'
+    menu_label = 'Releases'
     menu_icon = 'date'
     menu_order = 900 
 
-    list_display = ('title', 'uuid', 'status', 'publish_datetime')
+    list_display = ('site_code', 'title', 'uuid', 'status', 'publish_datetime')
+    list_filter = ('status', 'site_code',)
     search_fields = ('title',)
+    ordering = ('status', '-publish_datetime')
+    index_view_extra_css = 'wagtailadmin/css/list-release.css',
+
+    def get_extra_attrs_for_row(self, obj, context):
+        classname = ''
+        if obj == obj.__class__.objects.live(site_code=obj.site_code):
+            classname = 'is-live'
+        elif obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
+            classname = 'was-live'
+
+        return {
+            'class': classname,
+        }
 
 modeladmin_register(ReleaseAdmin)
 
