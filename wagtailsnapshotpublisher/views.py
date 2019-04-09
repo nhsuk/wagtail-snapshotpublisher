@@ -100,6 +100,17 @@ def release_detail(request, release_id, set_live_button=False):
     })
 
 
+def release_set_live_detail(request, release_id):
+    return release_detail(request, release_id, set_live_button=True)
+
+
+def release_set_live(request, release_id):
+    publisher_api = PublisherAPI()
+    release = WSSPContentRelease.objects.get(id=release_id)
+    publisher_api.set_live_content_release(release.site_code, release.uuid)
+    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+
+
 def get_document_release(
         request, site_code, content_release_uuid=None, type='site_definition', key='site_definition'):
 

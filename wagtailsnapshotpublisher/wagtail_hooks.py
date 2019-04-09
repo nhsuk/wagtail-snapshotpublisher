@@ -20,6 +20,7 @@ class ReleaseButtonHelper(ButtonHelper):
         btns = ButtonHelper.get_buttons_for_obj(self, obj, exclude=None, classnames_add=None, classnames_exclude=None)
         if not obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
             btns.insert(1, self.detail_revision_button(obj, ['button'], classnames_exclude))
+            btns.insert(2, self.set_live_revision_button(obj, ['button'], classnames_exclude))
         return btns
 
     def create_button(self, label, title, url, classnames_add=None, classnames_exclude=None):
@@ -41,6 +42,10 @@ class ReleaseButtonHelper(ButtonHelper):
         url = reverse('wagtailsnapshotpublisher_custom_admin:release-detail', kwargs={'release_id': obj.pk})
         return self.create_button('detail', 'Detail updated pages for this release', url, classnames_add, classnames_exclude)
     
+    def set_live_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
+        url = reverse('wagtailsnapshotpublisher_custom_admin:release-set-live-detail', kwargs={'release_id': obj.pk})
+        return self.create_button('set live', 'Set this release live', url, classnames_add, classnames_exclude)
+
 
 class ReleaseAdmin(ModelAdmin):
     model = WSSPContentRelease
