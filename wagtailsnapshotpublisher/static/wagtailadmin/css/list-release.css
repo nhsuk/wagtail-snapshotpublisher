@@ -1,7 +1,15 @@
-.is-live {
-    background: #189370;
+.listing tbody tr.is-live {
+    background: #B6EDC8;
 }
 
-.was-live {
+.listing tbody tr.is-live:hover {
+    background: #B6EDC8;
+}
+
+.listing tbody tr.was-live {
     background: #bbbbbb;
+}
+
+.listing tbody tr.was-live:hover {
+    background: #d1d1d1;
 }

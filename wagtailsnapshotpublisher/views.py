@@ -1,3 +1,5 @@
+import json
+
 from django.apps import apps
 from django.forms.models import model_to_dict
 from django.forms.models import modelform_factory
@@ -5,8 +7,9 @@ from django.http import HttpResponse, JsonResponse
 from django.http import HttpResponseServerError
 from django.shortcuts import get_object_or_404, redirect, render
 
-from wagtail.core.models import Page
+from wagtail.core.models import Page, PageRevision
 
+from wagtailsnapshotpublisher.models import WSSPContentRelease
 from djangosnapshotpublisher.publisher_api import PublisherAPI
 
 
@@ -54,6 +57,47 @@ def preview_model(request, content_app, content_class, content_id):
         return JsonResponse(object_dict)
     else:
         return HttpResponseServerError('Form is not valid')
+
+
+def release_detail(request, release_id, set_live_button=False):
+    publisher_api = PublisherAPI()
+    release = WSSPContentRelease.objects.get(id=release_id)
+    response = publisher_api.get_live_content_release(release.site_code)
+    live_release = response['content']
+    response = publisher_api.compare_content_releases(release.site_code, release.uuid, live_release.uuid)
+    comparison = response['content']
+
+    added_pages = []
+    removed_pages = []
+    changed_pages = []
+    for item  in comparison:
+        if item['diff'] == 'Added':
+            page_revision = PageRevision.objects.get(id=item['parameters']['revision_id'])
+            item['page_revision'] = page_revision
+            item['title'] = json.loads(page_revision.content_json)['title']
+            added_pages.append(item)
+        if item['diff'] == 'Removed':
+            page_revision = PageRevision.objects.get(id=item['parameters']['revision_id'])
+            item['title'] = json.loads(page_revision.content_json)['title']
+            item['page_revision'] = page_revision
+            removed_pages.append(item)
+        if item['diff'] == 'Changed':
+            page_revision = PageRevision.objects.get(id=item['parameters']['release_from']['revision_id'])
+            item['page_revision_from'] = page_revision
+            item['page_revision_compare_to'] = PageRevision.objects.get(id=item['parameters']['release_compare_to']['revision_id'])
+            item['title'] = json.loads(page_revision.content_json)['title']
+            changed_pages.append(item)
+
+    return render(request, 'wagtailadmin/release/detail.html', {
+        'comparison': comparison,
+        'added_pages': added_pages,
+        'changed_pages': changed_pages,
+        'removed_pages': removed_pages,
+        'set_live_button': set_live_button,
+        'release': release,
+        'live_release': live_release,
+        # 'error_msg': error_msg,
+    })
 
 
 def get_document_release(

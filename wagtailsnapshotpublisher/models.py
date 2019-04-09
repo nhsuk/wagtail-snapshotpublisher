@@ -134,7 +134,7 @@ class WithRelease(models.Model):
         return object_dict
 
 
-    def publish_to_release(self, instance=None, content_release=None):
+    def publish_to_release(self, instance=None, content_release=None, extra_parameters=None):
         if not instance:
             instance = self
 
@@ -150,6 +150,7 @@ class WithRelease(models.Model):
             json.dumps(object_dict, cls=StreamFieldEncoder),
             self.get_key(),
             self.get_name_slug(),
+            extra_parameters,
         )
 
     def unpublish_or_delete_from_release(self, release_id=None, recursively=False, delete=False):

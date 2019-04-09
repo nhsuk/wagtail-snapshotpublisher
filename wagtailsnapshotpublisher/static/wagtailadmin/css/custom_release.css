@@ -1,0 +1,19 @@
+.detail-release .added {
+    background: #b6edc8;
+}
+
+.detail-release .changed {
+    background: #fffbb2;
+}
+
+.detail-release .removed {
+    background: #eab4ba;
+}
+
+tbody tr.changed:nth-child(2n) {
+    border-bottom: 2px solid #e6e6e6;
+}
+
+tbody tr.changed:last-child {
+    border-bottom: 1px dashed #e6e6e6;
+}
