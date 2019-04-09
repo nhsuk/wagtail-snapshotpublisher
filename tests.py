@@ -441,3 +441,60 @@ class PageWithReleaseTests(WagtailPageTests):
             document_key=test_page1.get_key(),
             content_type=test_page1.get_name_slug(),
         )
+
+    def test_update_remove(self):
+        # Publish TestPage to a release
+        self.test_page.save_revision(self.user)
+
+        # Remove TestPage to a release
+        c = Client()
+        response = c.post(
+            '/admin/pages/{}/remove/{}/'.format(
+                self.test_page.id,
+                self.content_release.id,
+            ),
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.assertEqual(ReleaseDocument.objects.filter(
+                document_key=self.test_page.get_key(),
+                content_type=self.test_page.get_name_slug(),
+                content_releases=self.content_release,
+                deleted=True
+            ).count(),
+            1,
+        )
+
+    def test_remove_recursively(self):
+        # -homepage
+        #  |-test_page
+        #    |-test_page2
+        #      |-test_page3
+        #  |-test_page1
+        test_page1 = self.test_page.copy(False, self.homepage, {'slug': 'test_page1'})
+        test_page2 = self.test_page.copy(False, self.test_page)
+        test_page3 = self.test_page.copy(False, test_page2)
+
+        self.test_page.save_revision(self.user)
+        test_page1.save_revision(self.user)
+        test_page2.save_revision(self.user)
+        test_page3.save_revision(self.user)
+
+        self.assertEqual(ReleaseDocument.objects.count(), 4)
+
+        # Remove TestPage recursively to a release
+        c = Client()
+        response = c.post(
+            '/admin/pages/{}/remove/{}/recursively/'.format(
+                self.test_page.id,
+                self.content_release.id,
+            ),
+        )
+
+        self.assertEqual(ReleaseDocument.objects.filter(
+                content_releases=self.content_release,
+                deleted=True
+            ).count(),
+            3,
+        )

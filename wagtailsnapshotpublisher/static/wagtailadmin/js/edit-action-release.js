@@ -11,7 +11,6 @@ $(function() {
         $("#wssp-action-unpublish-release").click(function (e) {
             e.preventDefault();
             const releaseId = $('#id_content_release_unpublish').val()
-            console.log($('#unpublished_recursively').is(':checked'));
             const editFormAction = $('#id_content_release').closest("form").attr('action');
             let unpublishUrl = editFormAction.replace('/edit/', `/unpublish/${releaseId}/`);
             if($('#unpublished_recursively').is(':checked')){
@@ -19,9 +18,21 @@ $(function() {
             }
             window.location.href = unpublishUrl;
         });
+
+        //remove action
+        $("#wssp-action-remove-release").click(function (e) {
+            e.preventDefault();
+            const releaseId = $('#id_content_release_remove').val()
+            const editFormAction = $('#id_content_release').closest("form").attr('action');
+            let removeUrl = editFormAction.replace('/edit/', `/remove/${releaseId}/`);
+            if($('#removeed_recursively').is(':checked')){
+                removeUrl += 'recursively/'
+            }
+            window.location.href = removeUrl;
+        });
     }
 
-    function setUpReleasePopUp(action, id, title, submitBtnCopy) {
+    function setUpReleasePopUp(action, id, title, submitBtnCopy, recursively, recursivelyText) {
         //create popup
         const publishReleasePop = `<div id="${id}-popup" class="popup-cover"><div class="popup"></div></div>`;
         $("body").append(publishReleasePop);
@@ -36,25 +47,26 @@ $(function() {
         select_ontent_release.appendTo(releasePopUp);
         select_ontent_release.val(0);
 
-        if(action == "unpublish") {
-            let unpublished_recursively = $("<div />", {
+        // add recursively checkbox
+        if(recursively) {
+            let recursivelyComponent = $("<div />", {
                     "class": "field boolean_field checkbox_input",
                 }
             );
-            unpublished_recursively.append(
+            recursivelyComponent.append(
                 $("<label />", {
-                        "for": "unpublished_recursively",
-                        "text": "Unpublished all sub pages",
+                        "for": `${action}_recursively`,
+                        "text": recursivelyText,
                     }
                 ),
                 $("<input />", {
                         "type": "checkbox",
-                        "id": "unpublished_recursively",
-                        "name": "unpublished_recursively",
+                        "id": `${action}_recursively`,
+                        "name": `${action}_recursively`,
                     }
                 ),
             );
-            releasePopUp.append(unpublished_recursively);
+            releasePopUp.append(recursivelyComponent);
         }
 
         //add submit and cancel button to the popup
@@ -79,8 +91,9 @@ $(function() {
         //hide content_release dropdown
         $('#id_content_release').closest('.object.model_choice_field').hide();
 
-        setUpReleasePopUp('publish', 'wssp-action-publish-release', 'Releases', 'Publish');
-        setUpReleasePopUp('unpublish', 'wssp-action-unpublish-release', 'Releases', 'Unpublish');
+        setUpReleasePopUp('publish', 'wssp-action-publish-release', 'Pubish to a release', 'Publish');
+        setUpReleasePopUp('unpublish', 'wssp-action-unpublish-release', 'Unpublish from a release', 'Unpublish', true, 'Unpublish all sub pages');
+        setUpReleasePopUp('remove', 'wssp-action-remove-release', 'Remove from a release', 'Remove', true, 'Remove all sub pages');
         submitActions();
     }
 

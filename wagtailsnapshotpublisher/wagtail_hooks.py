@@ -1,5 +1,5 @@
 from django.templatetags.static import static
-from django.urls import resolve
+from django.urls import resolve, reverse
 from django.utils.html import format_html, format_html_join
 from django.utils.translation import ugettext_lazy as _
 
@@ -59,13 +59,22 @@ class UnpublishToReleaseMenuItem(ReleaseActionMenuItem):
     name = 'wssp-action-unpublish-release'
 
 
+class RemoveFromReleaseMenuItem(ReleaseActionMenuItem):
+    label = _('Remove From A Release')
+    name = 'wssp-action-remove-release'
+
+
 @hooks.register('register_page_action_menu_item')
 def register_publish_to_release_menu_item():
-    return PublishToReleaseMenuItem(order=10)
+    return PublishToReleaseMenuItem(order=30)
 
 @hooks.register('register_page_action_menu_item')
 def register_unpublish_to_release_menu_item():
     return UnpublishToReleaseMenuItem(order=20)
+
+@hooks.register('register_page_action_menu_item')
+def register_remove_from_release_menu_item():
+    return RemoveFromReleaseMenuItem(order=10)
 
 @hooks.register('construct_page_action_menu')
 def remove_submit_to_moderator_option(menu_items, request, context):

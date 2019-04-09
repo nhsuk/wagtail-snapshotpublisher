@@ -3,8 +3,7 @@ from django.forms.models import model_to_dict
 from django.forms.models import modelform_factory
 from django.http import HttpResponse, JsonResponse
 from django.http import HttpResponseServerError
-from django.shortcuts import get_object_or_404, redirect
-
+from django.shortcuts import get_object_or_404, redirect, render
 
 from wagtail.core.models import Page
 
@@ -13,7 +12,7 @@ from djangosnapshotpublisher.publisher_api import PublisherAPI
 
 def unpublish_page(request, page_id, release_id, recursively=False):
     page = get_object_or_404(Page, id=page_id).specific
-    page.unpublish_from_release(release_id, recursively)
+    page.unpublish_or_delete_from_release(release_id, recursively)
     return redirect('wagtailadmin_explore', page.get_parent().id)
 
 
@@ -24,7 +23,24 @@ def unpublish_recursively_page(request, page_id, release_id):
 def unpublish(request, content_app, content_class, content_id, release_id):
     model_class = apps.get_model(content_app, content_class)
     instance = get_object_or_404(model_class, id=content_id)
-    instance.unpublish_from_release(release_id)
+    instance.unpublish_or_delete_from_release(release_id)
+    return redirect('/admin/{}/{}/'.format(content_app, content_class))
+
+
+def remove_page(request, page_id, release_id, recursively=False):
+    page = get_object_or_404(Page, id=page_id).specific
+    page.unpublish_or_delete_from_release(release_id, recursively, True)
+    return redirect('wagtailadmin_explore', page.get_parent().id)
+
+
+def remove_recursively_page(request, page_id, release_id):
+    return remove_page(request, page_id, release_id, True)
+
+
+def remove(request, content_app, content_class, content_id, release_id):
+    model_class = apps.get_model(content_app, content_class)
+    instance = get_object_or_404(model_class, id=content_id)
+    instance.unpublish_or_delete_from_release(release_id, False, True)
     return redirect('/admin/{}/{}/'.format(content_app, content_class))
 
 
