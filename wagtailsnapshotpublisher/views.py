@@ -70,29 +70,34 @@ def release_detail(request, release_id, set_live_button=False):
     added_pages = []
     removed_pages = []
     changed_pages = []
+    extra_contents = []
     for item  in comparison:
-        if item['diff'] == 'Added':
-            page_revision = PageRevision.objects.get(id=item['parameters']['revision_id'])
-            item['page_revision'] = page_revision
-            item['title'] = json.loads(page_revision.content_json)['title']
-            added_pages.append(item)
-        if item['diff'] == 'Removed':
-            page_revision = PageRevision.objects.get(id=item['parameters']['revision_id'])
-            item['title'] = json.loads(page_revision.content_json)['title']
-            item['page_revision'] = page_revision
-            removed_pages.append(item)
-        if item['diff'] == 'Changed':
-            page_revision = PageRevision.objects.get(id=item['parameters']['release_from']['revision_id'])
-            item['page_revision_from'] = page_revision
-            item['page_revision_compare_to'] = PageRevision.objects.get(id=item['parameters']['release_compare_to']['revision_id'])
-            item['title'] = json.loads(page_revision.content_json)['title']
-            changed_pages.append(item)
+        if item['content_type'] == 'page':
+            if item['diff'] == 'Added':
+                page_revision = PageRevision.objects.get(id=item['parameters']['revision_id'])
+                item['page_revision'] = page_revision
+                item['title'] = json.loads(page_revision.content_json)['title']
+                added_pages.append(item)
+            if item['diff'] == 'Removed':
+                page_revision = PageRevision.objects.get(id=item['parameters']['revision_id'])
+                item['title'] = json.loads(page_revision.content_json)['title']
+                item['page_revision'] = page_revision
+                removed_pages.append(item)
+            if item['diff'] == 'Changed':
+                page_revision = PageRevision.objects.get(id=item['parameters']['release_from']['revision_id'])
+                item['page_revision_from'] = page_revision
+                item['page_revision_compare_to'] = PageRevision.objects.get(id=item['parameters']['release_compare_to']['revision_id'])
+                item['title'] = json.loads(page_revision.content_json)['title']
+                changed_pages.append(item)
+        else:
+            extra_contents.append(item)
 
     return render(request, 'wagtailadmin/release/detail.html', {
         'comparison': comparison,
         'added_pages': added_pages,
         'changed_pages': changed_pages,
         'removed_pages': removed_pages,
+        'extra_contents': json.dumps(extra_contents, indent=4) if extra_contents and request.user.has_perm('wagtailadmin.access_dev') else None,
         'set_live_button': set_live_button,
         'release': release,
         'live_release': live_release,

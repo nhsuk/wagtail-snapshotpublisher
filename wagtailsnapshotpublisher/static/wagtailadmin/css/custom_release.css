@@ -17,3 +17,9 @@ tbody tr.changed:nth-child(2n) {
 tbody tr.changed:last-child {
     border-bottom: 1px dashed #e6e6e6;
 }
+
+pre.extra-contents {
+    background: #fafafa;
+    border: 1px solid #eaeaea;
+    padding: 20px;
+}

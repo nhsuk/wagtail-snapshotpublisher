@@ -135,6 +135,11 @@
             </div>
         {% endif %}
 
+        {% if extra_contents %}
+            <h1>Extra Contents</h1>
+            <pre class="extra-contents">{{ extra_contents }}</pre>
+        {% endif %}
+
         {% if set_live_button %}
             <a class="button" href="{% url 'wagtailsnapshotpublisher_custom_admin:release-set-live' release.id %}">
                 <span>Set Live</span>
