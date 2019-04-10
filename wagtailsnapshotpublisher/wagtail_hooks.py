@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Permission
 from django.templatetags.static import static
 from django.urls import resolve, reverse
 from django.utils.html import format_html, format_html_join
@@ -147,3 +148,7 @@ def global_admin_css():
         '<link rel="stylesheet" href="{}">',
         static('wagtailadmin/css/custom_release.css')
     )
+
+@hooks.register('register_permissions')
+def register_permissions():
+    return Permission.objects.filter(content_type__app_label='wagtailadmin', codename='access_dev')
