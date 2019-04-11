@@ -116,6 +116,13 @@ def release_set_live(request, release_id):
     return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 
+def release_archive(request, release_id):
+    publisher_api = PublisherAPI()
+    release = WSSPContentRelease.objects.get(id=release_id)
+    publisher_api.archive_content_release(release.site_code, release.uuid)
+    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+
+
 def get_document_release(
         request, site_code, content_release_uuid=None, type='site_definition', key='site_definition'):
 
