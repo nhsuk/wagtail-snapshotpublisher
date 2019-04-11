@@ -51,7 +51,7 @@ class WSSPContentRelease(ContentRelease):
     ]
 
     def __str__(self):
-        return '{0} - {1}'.format(self.version, self.title)
+        return '[[{0}]] {1} - {2}'.format(self.site_code, self.version, self.title)
 
     class Meta:
         verbose_name = 'Release'

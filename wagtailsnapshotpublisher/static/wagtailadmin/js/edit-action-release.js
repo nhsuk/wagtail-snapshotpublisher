@@ -85,6 +85,19 @@ $(function() {
         });
     }
 
+    function releaseFiltering(siteCode) {
+        $("select#id_content_release > option").each(function() {
+            const optionRenditionRegExp = /.*(\[\[(.+)\]\])/;
+            const optionText = $(this).text();
+            const match = optionRenditionRegExp.exec(optionText);
+            if (match) {
+                if (optionText.indexOf(siteCode) == -1) {
+                    $(this).remove();
+                }
+            }
+        });
+    }
+
     function init() {
         $('#id_content_release').val(0);
 
@@ -94,6 +107,7 @@ $(function() {
         setUpReleasePopUp('publish', 'wssp-action-publish-release', 'Pubish to a release', 'Publish');
         setUpReleasePopUp('unpublish', 'wssp-action-unpublish-release', 'Unpublish from a release', 'Unpublish', true, 'Unpublish all sub pages');
         setUpReleasePopUp('remove', 'wssp-action-remove-release', 'Remove from a release', 'Remove', true, 'Remove all sub pages');
+        releaseFiltering(siteCode);
         submitActions();
     }
 

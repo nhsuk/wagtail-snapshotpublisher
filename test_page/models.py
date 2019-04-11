@@ -20,6 +20,11 @@ from wagtailsnapshotpublisher.models import PageWithRelease, ModelWithRelease
 from wagtail.api import APIField
 
 
+@register_setting
+class SiteSettings(BaseSetting):
+    title = models.CharField(max_length=255)
+
+
 class SimpleRichText(blocks.StructBlock):
     title = blocks.CharBlock(required=True)
     body = blocks.RichTextBlock(required=False)
@@ -84,6 +89,10 @@ class TestPage(PageWithRelease):
         }],
     }
 
+    @property
+    def site_code(self):
+        return SiteSettings.objects.get(site=self.get_site()).title
+
 
 class TestModel(ModelWithRelease):
     name1 = models.CharField(max_length=255)
@@ -128,11 +137,6 @@ class TestModel(ModelWithRelease):
             redirect_objects.append(redirect_object)
         
         return redirect_objects
-
-
-@register_setting
-class SiteSettings(BaseSetting):
-    title = models.CharField(max_length=255)
 
 
 @receiver(post_save, sender=SiteSettings)
