@@ -2,8 +2,10 @@ import json
 import re
 
 from django import forms
-from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
@@ -51,7 +53,8 @@ class WSSPContentRelease(ContentRelease):
     ]
 
     def __str__(self):
-        return '[[{0}]] {1} - {2}'.format(self.site_code, self.version, self.title)
+        return '[[{0}]] {1} - {2}__{3}'.format(
+            self.site_code, self.version, self.title, self.get_status_display())
 
     class Meta:
         verbose_name = 'Release'
@@ -79,10 +82,15 @@ class WithRelease(models.Model):
         null=True,
         default=None,
         on_delete=models.SET_NULL,
-        limit_choices_to={'status': 0})
+        limit_choices_to=Q(status=0) | Q(status=1),
+    )
 
     class Meta:
         abstract = True
+
+    @property
+    def live_releave(self):
+        return WSSPContentRelease.objects.live(site_code=self.site_code)
 
     def get_key(self):
         return self.id
@@ -182,6 +190,14 @@ class WithRelease(models.Model):
 
 class ModelWithRelease(WithRelease):
 
+    site_code = models.SlugField(max_length=100)
+    publish_to_live_release = models.BooleanField(default=False)
+
+    panels = [
+        FieldPanel('site_code', widget=site_code_widget),
+        FieldPanel('publish_to_live_release'),
+    ]
+
     class Meta:
         abstract = True
 
@@ -190,6 +206,20 @@ class ModelWithRelease(WithRelease):
 
     def get_class(self):
         return self.__class__.__name__.lower()
+    
+    def clean(self):
+        super().clean()
+
+        # get live release
+        if self.publish_to_live_release:
+            self.publish_to_live_release = False
+            publisher_api = PublisherAPI()
+            response = publisher_api.get_live_content_release(self.site_code)
+            if response['status'] == 'error':
+                raise ValidationError({'site_code': response['error_msg']})
+            
+            self.content_release = WSSPContentRelease.objects.get(id=response['content'].id)
+
 
     def save(self, *args, **kwargs):
         if self.content_release:
@@ -201,7 +231,7 @@ class PageWithRelease(Page, WithRelease):
 
     class Meta:
         abstract = True
-    
+
     def get_name_slug(self):
         return 'page'
 

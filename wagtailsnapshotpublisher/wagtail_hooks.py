@@ -106,17 +106,22 @@ class ReleaseActionMenuItem (ActionMenuItem):
 
 class PublishToReleaseMenuItem(ReleaseActionMenuItem):
     label = _('Publish To A Release')
-    name = 'wssp-action-publish-release'
+    name = 'wssp-actionrelease-publish-release'
 
 
 class UnpublishToReleaseMenuItem(ReleaseActionMenuItem):
     label = _('Unpublish From A Release')
-    name = 'wssp-action-unpublish-release'
+    name = 'wssp-actionrelease-unpublish-release'
 
 
 class RemoveFromReleaseMenuItem(ReleaseActionMenuItem):
     label = _('Remove From A Release')
-    name = 'wssp-action-remove-release'
+    name = 'wssp-actionrelease-remove-release'
+
+
+class PublishToLiveReleaseMenuItem(ReleaseActionMenuItem):
+    label = _('Publish Directly To Live')
+    name = 'wssp-actionliverelease-publish-live-release'
 
 
 @hooks.register('register_page_action_menu_item')
@@ -131,10 +136,24 @@ def register_unpublish_to_release_menu_item():
 def register_remove_from_release_menu_item():
     return RemoveFromReleaseMenuItem(order=10)
 
+@hooks.register('register_page_action_menu_item')
+def register_publish_to_live_release_menu_item():
+    return PublishToLiveReleaseMenuItem(order=40)
+
 @hooks.register('construct_page_action_menu')
 def remove_submit_to_moderator_option(menu_items, request, context):
-    if context['view'] == 'create' or (context['view'] == 'edit' and 'page' in context and hasattr(context['page'], 'content_release')):
-        menu_items[:] = [item for item in menu_items if item.name and item.name.startswith('wssp-action-')]
+    if context['view'] == 'create':
+        menu_items[:] = [item for item in menu_items if item.name and item.name.startswith('wssp-action')]
+
+    if context['view'] == 'edit' and 'page' in context and hasattr(context['page'], 'content_release'):
+        if hasattr(context['page'].__class__, 'release_config'):
+            items = []
+            if 'can_publish_to_release' in context['page'].__class__.release_config and context['page'].__class__.release_config['can_publish_to_release']:
+                items += [item for item in menu_items if item.name and item.name.startswith('wssp-actionrelease-')]
+            if 'can_publish_to_live_release' in context['page'].__class__.release_config and context['page'].__class__.release_config['can_publish_to_live_release']:
+                items += [item for item in menu_items if item.name and item.name.startswith('wssp-actionliverelease-')]
+            menu_items[:] = items
+
 
 @hooks.register('insert_editor_js')
 def add_release_js():
@@ -164,3 +183,7 @@ def global_admin_css():
 @hooks.register('register_permissions')
 def register_permissions():
     return Permission.objects.filter(content_type__app_label='wagtailadmin', codename='access_dev')
+
+
+class ModelAdminWithRelease(ModelAdmin):
+    edit_template_name = 'modeladmin/edit_with_release.html'

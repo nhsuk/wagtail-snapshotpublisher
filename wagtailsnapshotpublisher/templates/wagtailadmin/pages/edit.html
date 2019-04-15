@@ -2,5 +2,9 @@
 
 {% block extra_js %}
     {{ block.super }}
-    <script type="text/javascript">const siteCode = "{{page.site_code}}";</script>
+
+    <script type="text/javascript">
+        const siteCode = "{{page.site_code}}";
+        const liveReleaveId = "{{page.live_releave.id}}";
+    </script>
 {% endblock %}

@@ -2,13 +2,13 @@ $(function() {
 
     function submitActions() {
         //publish action
-        $("#wssp-action-publish-release").click(function (e) {
+        $("#wssp-actionrelease-publish-release").click(function (e) {
             $('#id_content_release').val($('#id_content_release_publish').val());
             $('#id_content_release').closest("form").submit();
         });
 
         //unpublish action
-        $("#wssp-action-unpublish-release").click(function (e) {
+        $("#wssp-actionrelease-unpublish-release").click(function (e) {
             e.preventDefault();
             const releaseId = $('#id_content_release_unpublish').val()
             const editFormAction = $('#id_content_release').closest("form").attr('action');
@@ -20,7 +20,7 @@ $(function() {
         });
 
         //remove action
-        $("#wssp-action-remove-release").click(function (e) {
+        $("#wssp-actionrelease-remove-release").click(function (e) {
             e.preventDefault();
             const releaseId = $('#id_content_release_remove').val()
             const editFormAction = $('#id_content_release').closest("form").attr('action');
@@ -30,9 +30,21 @@ $(function() {
             }
             window.location.href = removeUrl;
         });
+
+        $("#wssp-actionliverelease-publish-live-release").click(function (e) {
+            if($('#id_publish_to_live_release').length) {
+                $('#id_publish_to_live_release').prop('checked', true);
+            } else {
+                if(!$('#live-release-option').length) {
+                    $('select#id_content_release').append($('<option>', {value: liveReleaveId, text:'Live Release', id: 'live-release-option'}));
+                    $('#id_content_release').val(liveReleaveId);
+                }
+            }
+            $('#id_content_release').closest("form").submit();
+        }); 
     }
 
-    function setUpReleasePopUp(action, id, title, submitBtnCopy, recursively, recursivelyText) {
+    function setUpReleasePopUp(action, show_release_dropdown, id, title, submitBtnCopy, recursively, recursivelyText) {
         //create popup
         const publishReleasePop = `<div id="${id}-popup" class="popup-cover"><div class="popup"></div></div>`;
         $("body").append(publishReleasePop);
@@ -42,10 +54,12 @@ $(function() {
         releasePopUp.append(`<h2>${title}</h2>`);
         
         //add a copy of the content_release dropdown to the popup
-        let select_ontent_release = $("#id_content_release").clone()
-        select_ontent_release.attr("id", `id_content_release_${action}`);
-        select_ontent_release.appendTo(releasePopUp);
-        select_ontent_release.val(0);
+        if(show_release_dropdown) {
+            let select_ontent_release = $("#id_content_release").clone()
+            select_ontent_release.attr("id", `id_content_release_${action}`);
+            select_ontent_release.appendTo(releasePopUp);
+            select_ontent_release.val(0);
+        }
 
         // add recursively checkbox
         if(recursively) {
@@ -75,6 +89,11 @@ $(function() {
 
         //show popup
         $(`input[name="${id}"]`).click(function (e) {
+            if(show_release_dropdown) {
+                if(siteCode == '__all__') {
+                    releaseFiltering(`id_content_release_${action}`, false);
+                }
+            }
             e.preventDefault();
             $(`#${id}-popup`).show();
         });
@@ -85,30 +104,62 @@ $(function() {
         });
     }
 
-    function releaseFiltering(siteCode) {
-        $("select#id_content_release > option").each(function() {
-            const optionRenditionRegExp = /.*(\[\[(.+)\]\])/;
+    function releaseFiltering(id, remove_live_release=true) {
+        $('select#'+ id +' > option').each(function() {
+            $(this).show();
             const optionText = $(this).text();
-            const match = optionRenditionRegExp.exec(optionText);
-            if (match) {
-                if (optionText.indexOf(siteCode) == -1) {
-                    $(this).remove();
+
+            // check if pending release
+            if(remove_live_release) {
+                const optionStatusRegExp = /.+(__.+)/;
+                const statusMatch = optionStatusRegExp.exec(optionText);
+                if (statusMatch) {
+                    if (optionText.indexOf('__PENDING') !== -1) {
+                        const newText = optionText.replace('__PENDING', '');
+                        $(this).text(newText);
+                    } else {
+                        $(this).remove();
+                    }
+                }
+            }
+
+            // check if connrect site_code
+            const optionSiteCodeRegExp = /.*(\[\[(.+)\]\])/;
+            const siteCodeMatch = optionSiteCodeRegExp.exec(optionText);
+            let siteCodeFilter = siteCode;
+            if(siteCode == '__all__') {
+                siteCodeFilter = $('#id_site_code').val();
+            }
+            if (siteCodeMatch) {
+                if (optionText.indexOf(siteCodeFilter) == -1) {
+                    // $(this).remove();
+                    $(this).hide();
                 }
             }
         });
     }
 
     function init() {
-        $('#id_content_release').val(0);
+        if($('#id_content_release').length) {
+            $('#id_content_release').val(0);
 
-        //hide content_release dropdown
-        $('#id_content_release').closest('.object.model_choice_field').hide();
+            //hide content_release dropdown
+            $('#id_content_release').closest('.object.model_choice_field').hide();
 
-        setUpReleasePopUp('publish', 'wssp-action-publish-release', 'Pubish to a release', 'Publish');
-        setUpReleasePopUp('unpublish', 'wssp-action-unpublish-release', 'Unpublish from a release', 'Unpublish', true, 'Unpublish all sub pages');
-        setUpReleasePopUp('remove', 'wssp-action-remove-release', 'Remove from a release', 'Remove', true, 'Remove all sub pages');
-        releaseFiltering(siteCode);
-        submitActions();
+            //hide publish_to_live_release checkbox 
+            if($('#id_publish_to_live_release').closest('.object.boolean_field').length) {
+                $('#id_publish_to_live_release').closest('.object.boolean_field').hide();
+            }
+
+            if(siteCode){
+                releaseFiltering('id_content_release');
+                setUpReleasePopUp('publish', true, 'wssp-actionrelease-publish-release', 'Publish to a release', 'Publish');
+                setUpReleasePopUp('unpublish', true, 'wssp-actionrelease-unpublish-release', 'Unpublish from a release', 'Unpublish', true, 'Unpublish all sub pages');
+                setUpReleasePopUp('remove', true, 'wssp-actionrelease-remove-release', 'Remove from a release', 'Remove', true, 'Remove all sub pages');
+                setUpReleasePopUp('publish-live', false, 'wssp-actionliverelease-publish-live-release', 'Publish the current live release', 'Publish');
+                submitActions();
+            }
+        }
     }
 
     $(document).on('page:load', init);

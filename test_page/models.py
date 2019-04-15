@@ -59,6 +59,11 @@ class TestPage(PageWithRelease):
     name1 = models.CharField(max_length=255)
     name2 = models.CharField(max_length=255)
 
+    release_config = {
+        'can_publish_to_release': True,
+        'can_publish_to_live_release': True,
+    }
+
     body = StreamField([
         ('simple_richtext', SimpleRichText(icon='title')),
         ('block_list', BlockList()),
@@ -94,11 +99,20 @@ class TestPage(PageWithRelease):
         return SiteSettings.objects.get(site=self.get_site()).title
 
 
+# TestPage.release_config['can_publish_to_release'] = True
+# TestPage.release_config['can_publish_to_live_release'] = True
+
+
 class TestModel(ModelWithRelease):
     name1 = models.CharField(max_length=255)
     name2 = models.CharField(max_length=255)
 
-    panels = [
+    release_config = {
+        'can_publish_to_release': True,
+        'can_publish_to_live_release': True,
+    }
+
+    panels = ModelWithRelease.panels + [
         FieldPanel('name1'),
         FieldPanel('name2'),
         FieldPanel('content_release'),
@@ -137,6 +151,9 @@ class TestModel(ModelWithRelease):
             redirect_objects.append(redirect_object)
         
         return redirect_objects
+
+# TestPage.release_config['can_publish_to_release'] = False
+# TestPage.release_config['can_publish_to_live_release'] = False
 
 
 @receiver(post_save, sender=SiteSettings)

@@ -63,6 +63,14 @@ def release_detail(request, release_id, set_live_button=False):
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
     response = publisher_api.get_live_content_release(release.site_code)
+
+    if response['status'] == 'error':
+        return render(request, 'wagtailadmin/release/detail.html', {
+            'set_live_button': set_live_button,
+            'release': release,
+            'error_msg': response['error_msg'],
+        })
+
     live_release = response['content']
     response = publisher_api.compare_content_releases(release.site_code, release.uuid, live_release.uuid)
     comparison = response['content']
@@ -101,7 +109,6 @@ def release_detail(request, release_id, set_live_button=False):
         'set_live_button': set_live_button,
         'release': release,
         'live_release': live_release,
-        # 'error_msg': error_msg,
     })
 
 

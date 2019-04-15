@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
                 ('contentrelease_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='djangosnapshotpublisher.ContentRelease')),
             ],
             options={
-                'verbose_name': 'Releases',
+                'verbose_name': 'Release',
             },
             bases=('djangosnapshotpublisher.contentrelease',),
         ),

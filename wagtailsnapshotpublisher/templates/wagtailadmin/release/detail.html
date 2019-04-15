@@ -1,144 +1,138 @@
 {% extends "wagtailadmin/base.html" %}
 {% load i18n wagtailadmin_tags %}
 
-{% block titletag %}{% if release and live_release %}{% blocktrans with title=release.title %}Release detail: {{ title }}{% endblocktrans %}{% else %}{% blocktrans %}Incorrect Release{% endblocktrans %}{% endif %}{% endblock %}
+{% block titletag %}{% if release %}{% blocktrans with title=release.title %}Release detail: {{ title }}{% endblocktrans %}{% else %}{% blocktrans %}Incorrect Release{% endblocktrans %}{% endif %}{% endblock %}
 
-
-{% comment %}
-{% block extra_css %}
-    {{ block.super }}
-    <style>
-        #revision-results table td.updated {
-            background: #FFFBB2;
-        }
-
-        #revision-results table td.new {
-            background: #B6EDC8;
-        }
-
-        #revision-results table td.removed {
-            background: #EAB4BA;
-        }
-    </style>
-{% endblock %}
-{% endcomment %}
 
 {% block content %}
+
     {% trans "Incorrect Release" as revisions_str %}
+    
+    {% if release %}
+        {% trans "Release detail: "|add:release.title as revisions_str %}
+    {% endif %}
     {% if release and live_release %}
         {% trans "COMPARE \""|add:release.title|add:"\" TO \""|add:live_release.title|add:"\"" as revisions_str %}
     {% endif %}
     {% include "wagtailadmin/shared/header.html" with title=revisions_str subtitle="" icon="doc-empty-inverse" %}
 
     <div class="nice-padding">
-        {% if added_pages %}
-            <h1>Added Pages</h1>
-            <div id="details-release-added-results" class="detail-release">
-                <table class="listing">
-                    <tbody>
-                        {% for item in added_pages %}
-                            <tr class="{{ item.diff|lower }}">
-                                <td class="title">
-                                    <h2>
+        {% if error_msg %}
+            <h1>{{ error_msg }}</h1>
+            <ul>
+                <li>site code: {{ release.site_code }}</li>
+            </ul>
+        {% else %}
+            {% if added_pages %}
+                <h1>Added Pages</h1>
+                <div id="details-release-added-results" class="detail-release">
+                    <table class="listing">
+                        <tbody>
+                            {% for item in added_pages %}
+                                <tr class="{{ item.diff|lower }}">
+                                    <td class="title">
+                                        <h2>
+                                            <a href="{% url 'wagtailadmin_pages:edit' item.page_revision.page.id %}">
+                                                <span>{{ item.title }}</span>
+                                            </a>
+                                        </h2>
+                                    </td>
+                                    <td>
                                         <a href="{% url 'wagtailadmin_pages:edit' item.page_revision.page.id %}">
-                                            <span>{{ item.title }}</span>
+                                            <span>{{ item.page_revision.created_at }}</span>
+                                            <span>
+                                                {% trans 'by' context 'points to a user who created a revision' %}<span class="avatar small"><img src="{% avatar_url item.page_revision.user size=25 %}" /></span>{{ item.page_revision.user }}
+                                            </span>
                                         </a>
-                                    </h2>
-                                </td>
-                                <td>
-                                    <a href="{% url 'wagtailadmin_pages:edit' item.page_revision.page.id %}">
-                                        <span>{{ item.page_revision.created_at }}</span>
-                                        <span>
-                                            {% trans 'by' context 'points to a user who created a revision' %}<span class="avatar small"><img src="{% avatar_url item.page_revision.user size=25 %}" /></span>{{ item.page_revision.user }}
-                                        </span>
-                                    </a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
 
-        {% if changed_pages %}
-            <h1>Updated Pages</h1>
-            <div id="details-release-changed-results" class="detail-release">
-                <table class="listing">
-                    <tbody>
-                        {% for item in changed_pages %}
-                            <tr class="{{ item.diff|lower }}">
-                                <td class="title">
-                                    <h2>
-                                        <a href="{% url 'wagtailadmin_pages:edit' item.page_revision_from.page.id %}">
-                                            <span>{{ item.title }}</span>
+            {% if changed_pages %}
+                <h1>Updated Pages</h1>
+                <div id="details-release-changed-results" class="detail-release">
+                    <table class="listing">
+                        <tbody>
+                            {% for item in changed_pages %}
+                                <tr class="{{ item.diff|lower }}">
+                                    <td class="title">
+                                        <h2>
+                                            <a href="{% url 'wagtailadmin_pages:edit' item.page_revision_from.page.id %}">
+                                                <span>{{ item.title }}</span>
+                                            </a>
+                                        </h2>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'wagtailadmin_pages:revisions_revert' item.page_revision_from.page.id item.page_revision_from.id%}">
+                                            <span>Changes :</span>
+                                            <span>{{ item.page_revision_from.created_at }}</span>
+                                            <span>
+                                                {% trans 'by' context 'points to a user who created a revision' %}<span class="avatar small"><img src="{% avatar_url item.page_revision_from.user size=25 %}" /></span>{{ item.page_revision_from.user }}
+                                            </span>
                                         </a>
-                                    </h2>
-                                </td>
-                                <td>
-                                    <a href="{% url 'wagtailadmin_pages:revisions_revert' item.page_revision_from.page.id item.page_revision_from.id%}">
-                                        <span>Changes :</span>
-                                        <span>{{ item.page_revision_from.created_at }}</span>
-                                        <span>
-                                            {% trans 'by' context 'points to a user who created a revision' %}<span class="avatar small"><img src="{% avatar_url item.page_revision_from.user size=25 %}" /></span>{{ item.page_revision_from.user }}
-                                        </span>
-                                    </a>
-                                </td>
-                            </tr>
-                            <tr class="{{ item.diff|lower }}">
-                                <td>
-                                    <a class="button" href="{% url 'wagtailadmin_pages:revisions_compare' item.page_revision_from.page.id item.page_revision_compare_to.id item.page_revision_from.id%}">
-                                        <span>Compare</span>
-                                    </a>
-                                </td>
-                                <td>
-                                    <a href="{% url 'wagtailadmin_pages:revisions_revert' item.page_revision_compare_to.page.id item.page_revision_compare_to.id%}">
-                                        <span>Live: </span>
-                                        <span>{{ item.page_revision_compare_to.created_at }}</span>
-                                        <span>
-                                            {% trans 'by' context 'points to a user who created a revision' %}<span class="avatar small"><img src="{% avatar_url item.page_revision_compare_to.user size=25 %}" /></span>{{ item.page_revision_compare_to.user }}
-                                        </span>
-                                    </a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr class="{{ item.diff|lower }}">
+                                    <td>
+                                        <a class="button" href="{% url 'wagtailadmin_pages:revisions_compare' item.page_revision_from.page.id item.page_revision_compare_to.id item.page_revision_from.id%}">
+                                            <span>Compare</span>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'wagtailadmin_pages:revisions_revert' item.page_revision_compare_to.page.id item.page_revision_compare_to.id%}">
+                                            <span>Live: </span>
+                                            <span>{{ item.page_revision_compare_to.created_at }}</span>
+                                            <span>
+                                                {% trans 'by' context 'points to a user who created a revision' %}<span class="avatar small"><img src="{% avatar_url item.page_revision_compare_to.user size=25 %}" /></span>{{ item.page_revision_compare_to.user }}
+                                            </span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
 
-        {% if removed_pages %}
-            <h1>Removed Pages</h1>
-            <div id="details-release-removed-results" class="detail-release">
-                <table class="listing">
-                    <tbody>
-                        {% for item in removed_pages %}
-                            <tr class="{{ item.diff|lower }}">
-                                <td class="title">
-                                    <h2>
+            {% if removed_pages %}
+                <h1>Removed Pages</h1>
+                <div id="details-release-removed-results" class="detail-release">
+                    <table class="listing">
+                        <tbody>
+                            {% for item in removed_pages %}
+                                <tr class="{{ item.diff|lower }}">
+                                    <td class="title">
+                                        <h2>
+                                            <a href="{% url 'wagtailadmin_pages:edit' item.page_revision.page.id %}">
+                                                <span>{{ item.title }}</span>
+                                            </a>
+                                        </h2>
+                                    </td>
+                                    <td>
                                         <a href="{% url 'wagtailadmin_pages:edit' item.page_revision.page.id %}">
-                                            <span>{{ item.title }}</span>
+                                            <span>{{ item.page_revision.created_at }}</span>
+                                            <span>
+                                                {% trans 'by' context 'points to a user who created a revision' %}<span class="avatar small"><img src="{% avatar_url item.page_revision.user size=25 %}" /></span>{{ item.page_revision.user }}
+                                            </span>
                                         </a>
-                                    </h2>
-                                </td>
-                                <td>
-                                    <a href="{% url 'wagtailadmin_pages:edit' item.page_revision.page.id %}">
-                                        <span>{{ item.page_revision.created_at }}</span>
-                                        <span>
-                                            {% trans 'by' context 'points to a user who created a revision' %}<span class="avatar small"><img src="{% avatar_url item.page_revision.user size=25 %}" /></span>{{ item.page_revision.user }}
-                                        </span>
-                                    </a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
 
-        {% if extra_contents %}
-            <h1>Extra Contents</h1>
-            <pre class="extra-contents">{{ extra_contents }}</pre>
+            {% if extra_contents %}
+                <h1>Extra Contents</h1>
+                <pre class="extra-contents">{{ extra_contents }}</pre>
+            {% endif %}
         {% endif %}
+        
 
         {% if set_live_button %}
             <a class="button" href="{% url 'wagtailsnapshotpublisher_custom_admin:release-set-live' release.id %}">
