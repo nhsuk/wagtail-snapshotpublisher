@@ -5,7 +5,9 @@ from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, Count, Min
+from django.db.models.signals import pre_save, post_save
+from django.dispatch import receiver
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
@@ -27,8 +29,16 @@ if settings.SITE_CODE_CHOICES:
         choices=settings.SITE_CODE_CHOICES,
     )
 
+VERSION_TYPES = (
+    (0, 'MAJOR'),
+    (1, 'MINOR'),
+    (2, 'PATCH'),
+)
+
 
 class WSSPContentRelease(ContentRelease):
+
+    version_type = models.IntegerField(choices=VERSION_TYPES, default=1)
 
     panels = [
         MultiFieldPanel(
@@ -37,7 +47,8 @@ class WSSPContentRelease(ContentRelease):
                 ReadOnlyPanel('uuid'),
                 FieldPanel('status'),
                 FieldPanel('title'),
-                FieldPanel('version'),
+                FieldPanel('version_type', widget=forms.RadioSelect),
+                ReadOnlyPanel('version'),
             ],
             heading='General',
         ),
@@ -72,6 +83,76 @@ class WSSPContentRelease(ContentRelease):
             if hasattr(panels[i], 'children'):
                 return cls.get_panel_field_from_panels(panels[i].children, field_name)
         return None
+
+
+@receiver(pre_save, sender=WSSPContentRelease)
+def define_version(sender, instance, *args, **kwargs):
+    if not instance.version and instance.status != 0:
+        previous_version = '0.0.0'
+
+        # get previous release
+        content_releases = WSSPContentRelease.objects.filter(
+            site_code=instance.site_code,
+        ).exclude(
+            status=0,
+        ).exclude(
+            id=instance.id,
+        )
+        if instance.publish_datetime:
+            content_releases = content_releases.exclude(
+                publish_datetime=None,
+            ).exclude(
+                publish_datetime__gt=instance.publish_datetime,
+            )
+
+        content_releases = content_releases.order_by('-version')
+
+        if content_releases.exists():
+            previous_version = content_releases.first().version
+
+        version_list = previous_version.split('.')
+        i=0
+        for i in range(len(version_list)):
+            if i == instance.version_type:
+                version_list[i] = str(int(version_list[i]) + 1)
+            if i > instance.version_type:
+                version_list[i] = '0'
+            i += 1
+
+        next_version = '.'.join(version_list)
+        instance.version = next_version
+        return instance
+
+@receiver(post_save, sender=WSSPContentRelease)
+def fix_versions_conflict(sender, instance, *args, **kwargs):
+    duplicate_version = WSSPContentRelease.objects.filter(
+            site_code=instance.site_code,
+        ).values(
+            'version'
+        ).annotate(
+            count_same_version=Count('version')
+        ).exclude(count_same_version__lte=1)
+
+    if duplicate_version:
+        # get min version from duplicate_version
+        min_version = duplicate_version.aggregate(Min('version'))['version__min']
+
+        releases_to_update = WSSPContentRelease.objects.filter(
+            site_code=instance.site_code,
+            version__gte=min_version,
+        ).order_by('publish_datetime')
+
+        # reset version
+        for release in releases_to_update:
+            content_release = ContentRelease.objects.get(id=release.id)
+            content_release.version = None
+            content_release.save()
+        
+        # update version
+        for release in releases_to_update:
+            release.version = None
+            release = define_version(WSSPContentRelease, release)
+            release.save()
 
 
 class WithRelease(models.Model):

@@ -63,7 +63,7 @@ class ReleaseAdmin(ModelAdmin):
     menu_icon = 'date'
     menu_order = 900 
 
-    list_display = ('site_code', 'title', 'uuid', 'status', 'publish_datetime')
+    list_display = ('site_code', 'title', 'uuid', 'status', 'publish_datetime', 'version')
     list_filter = ('status', 'site_code',)
     search_fields = ('title',)
     ordering = ('status', '-publish_datetime')

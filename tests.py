@@ -4,6 +4,7 @@ from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 
 from django.contrib.auth.models import User
 from django.test import Client
+from django.utils import timezone
 
 from wagtail.contrib.redirects.models import Redirect
 from wagtail.core.models import Page
@@ -150,6 +151,122 @@ class ModelWithReleaseTests(WagtailPageTests):
                 content_releases=self.content_release,
             ).exists()
         )
+    
+    def test_define_version(self):
+        
+        # Create ContentRelease Major Version
+        content_release1 = WSSPContentRelease(
+            title='release1',
+            site_code='site1',
+            version_type=0,
+            status=1,
+            publish_datetime=timezone.now() - timezone.timedelta(days=10),
+        )
+        content_release1.save()
+        content_release1 = WSSPContentRelease.objects.get(id=content_release1.id)
+        self.assertEqual(content_release1.version, '1.0.0')
+
+        # Create ContentRelease Minor Version
+        content_release2 = WSSPContentRelease(
+            title='release2',
+            site_code='site1',
+            version_type=1,
+            status=1,
+            publish_datetime=timezone.now() - timezone.timedelta(days=5),
+        )
+        content_release2.save()
+        content_release2 = WSSPContentRelease.objects.get(id=content_release2.id)
+        self.assertEqual(content_release2.version, '1.1.0')
+
+        # Create ContentRelease Patch Version
+        content_release3 = WSSPContentRelease(
+            title='release3',
+            site_code='site1',
+            version_type=2,
+            status=1,
+            publish_datetime=timezone.now() - timezone.timedelta(days=1),
+        )
+        content_release3.save()
+        content_release3 = WSSPContentRelease.objects.get(id=content_release3.id)
+        self.assertEqual(content_release3.version, '1.1.1')
+
+        # Create ContentRelease with duplicate Major Version
+        content_release4 = WSSPContentRelease(
+            title='release4',
+            site_code='site1',
+            version_type=0,
+            status=1,
+            publish_datetime=timezone.now() - timezone.timedelta(days=11),
+        )
+        content_release4.save()
+
+        # content_release1 = 2.0.0
+        # content_release2 = 2.1.0
+        # content_release3 = 2.1.1
+        # content_release4 = 1.0.0
+        content_release1 = WSSPContentRelease.objects.get(id=content_release1.id)
+        self.assertEqual(content_release1.version, '2.0.0')
+        content_release2 = WSSPContentRelease.objects.get(id=content_release2.id)
+        self.assertEqual(content_release2.version, '2.1.0')
+        content_release3 = WSSPContentRelease.objects.get(id=content_release3.id)
+        self.assertEqual(content_release3.version, '2.1.1')
+        content_release4 = WSSPContentRelease.objects.get(id=content_release4.id)
+        self.assertEqual(content_release4.version, '1.0.0')
+
+        # Create ContentRelease with duplicate Minor Version
+        content_release5 = WSSPContentRelease(
+            title='release5',
+            site_code='site1',
+            version_type=1,
+            status=1,
+            publish_datetime=timezone.now() - timezone.timedelta(days=4),
+        )
+        content_release5.save()
+
+        # content_release1 = 2.0.0
+        # content_release2 = 2.1.0
+        # content_release3 = 2.1.1
+        # content_release4 = 1.0.0
+        # content_release5 = 2.2.0
+        content_release1 = WSSPContentRelease.objects.get(id=content_release1.id)
+        self.assertEqual(content_release1.version, '2.0.0')
+        content_release2 = WSSPContentRelease.objects.get(id=content_release2.id)
+        self.assertEqual(content_release2.version, '2.1.0')
+        content_release3 = WSSPContentRelease.objects.get(id=content_release3.id)
+        self.assertEqual(content_release3.version, '2.1.1')
+        content_release4 = WSSPContentRelease.objects.get(id=content_release4.id)
+        self.assertEqual(content_release4.version, '1.0.0')
+        content_release5 = WSSPContentRelease.objects.get(id=content_release5.id)
+        self.assertEqual(content_release5.version, '2.2.0')
+
+        # Create ContentRelease with duplicate Patch Version
+        content_release6 = WSSPContentRelease(
+            title='release6',
+            site_code='site1',
+            version_type=2,
+            status=1,
+            publish_datetime=timezone.now() - timezone.timedelta(days=2),
+        )
+        content_release6.save()
+
+        # content_release1 = 2.0.0
+        # content_release2 = 2.1.0
+        # content_release3 = 2.1.1
+        # content_release4 = 1.0.0
+        # content_release5 = 2.2.0
+        # content_release6 = 2.2.1
+        content_release1 = WSSPContentRelease.objects.get(id=content_release1.id)
+        self.assertEqual(content_release1.version, '2.0.0')
+        content_release2 = WSSPContentRelease.objects.get(id=content_release2.id)
+        self.assertEqual(content_release2.version, '2.1.0')
+        content_release3 = WSSPContentRelease.objects.get(id=content_release3.id)
+        self.assertEqual(content_release3.version, '2.1.1')
+        content_release4 = WSSPContentRelease.objects.get(id=content_release4.id)
+        self.assertEqual(content_release4.version, '1.0.0')
+        content_release5 = WSSPContentRelease.objects.get(id=content_release5.id)
+        self.assertEqual(content_release5.version, '2.2.0')
+        content_release6 = WSSPContentRelease.objects.get(id=content_release6.id)
+        self.assertEqual(content_release6.version, '2.2.1')
 
 
 class PageWithReleaseTests(WagtailPageTests):
