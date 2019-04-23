@@ -32,13 +32,14 @@ if settings.SITE_CODE_CHOICES:
 VERSION_TYPES = (
     (0, 'MAJOR'),
     (1, 'MINOR'),
-    (2, 'PATCH'),
+    # (2, 'PATCH'),
 )
 
 
 class WSSPContentRelease(ContentRelease):
 
     version_type = models.IntegerField(choices=VERSION_TYPES, default=1)
+    restored = models.BooleanField(default=False)
 
     panels = [
         MultiFieldPanel(
@@ -88,7 +89,7 @@ class WSSPContentRelease(ContentRelease):
 @receiver(pre_save, sender=WSSPContentRelease)
 def define_version(sender, instance, *args, **kwargs):
     if not instance.version and instance.status != 0:
-        previous_version = '0.0.0'
+        previous_version = '0.0'
 
         # get previous release
         content_releases = WSSPContentRelease.objects.filter(

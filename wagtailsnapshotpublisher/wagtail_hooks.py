@@ -27,6 +27,7 @@ class ReleaseButtonHelper(ButtonHelper):
             btns.insert(2, self.set_live_revision_button(obj, ['button'], classnames_exclude))
         elif obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
             btns.insert(1, self.archive_revision_button(obj, ['button'], classnames_exclude))
+            btns.insert(2, self.restore_button(obj, ['button'], classnames_exclude))
         return btns
 
     def create_button(self, label, title, url, classnames_add=None, classnames_exclude=None):
@@ -55,6 +56,10 @@ class ReleaseButtonHelper(ButtonHelper):
     def archive_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
         url = reverse('wagtailsnapshotpublisher_custom_admin:release-archive', kwargs={'release_id': obj.pk})
         return self.create_button('archive', 'Archive this release', url, classnames_add, classnames_exclude)
+
+    def restore_button(self, obj, classnames_add=None, classnames_exclude=None):
+        url = reverse('wagtailsnapshotpublisher_custom_admin:release-restore', kwargs={'release_id': obj.pk})
+        return self.create_button('restore', 'Restore', url, classnames_add, classnames_exclude)
 
 
 class ReleaseAdmin(ModelAdmin):

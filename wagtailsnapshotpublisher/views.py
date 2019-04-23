@@ -3,9 +3,9 @@ import json
 from django.apps import apps
 from django.forms.models import model_to_dict
 from django.forms.models import modelform_factory
-from django.http import HttpResponse, JsonResponse
-from django.http import HttpResponseServerError
+from django.http import HttpResponse, JsonResponse, HttpResponseServerError, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.translation import ugettext_lazy as _
 
 from wagtail.core.models import Page, PageRevision
 
@@ -120,6 +120,9 @@ def release_set_live(request, release_id):
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
     publisher_api.set_live_content_release(release.site_code, release.uuid)
+    WSSPContentRelease.objects.live(
+        site_code=release.site_code,
+    )
     return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 
@@ -151,3 +154,35 @@ def get_document_release(
     if reponse['status'] == 'success':
         return HttpResponse(reponse['content'].document_json, content_type="application/json")
     return JsonResponse(reponse)
+
+
+def release_restore(request, release_id):
+    try:
+        release_to_restore = WSSPContentRelease.objects.get(id=release_id)
+        site_code = release_to_restore.site_code
+        live_release = WSSPContentRelease.objects.live(site_code=site_code)
+
+        WSSPContentRelease.objects.lives(
+            site_code=site_code,
+        ).exclude(
+            pk=live_release.pk,
+        ).get(
+            pk=release_to_restore.pk,
+        )
+    except WSSPContentRelease.DoesNotExist:
+        raise Http404(_('This release cannot be restore'))
+    
+    title = release_to_restore.title
+    if not release_to_restore.restored:
+        title = '{} - Restored'.format(release_to_restore.title)
+
+    release = WSSPContentRelease(
+        version_type=0,
+        title=title,
+        site_code=site_code,
+        base_release=release_to_restore,
+        restored=True,
+    )
+    release.save()
+
+    return release_set_live(request, release.id)

@@ -11,6 +11,7 @@ from wagtail.core.models import Page
 from wagtail.tests.utils import WagtailPageTests
 
 from djangosnapshotpublisher.models import ReleaseDocument
+from djangosnapshotpublisher.publisher_api import PublisherAPI
 from wagtailsnapshotpublisher.models import WSSPContentRelease
 
 from test_page.models import TestModel, TestPage, TestRelatedModel
@@ -164,7 +165,7 @@ class ModelWithReleaseTests(WagtailPageTests):
         )
         content_release1.save()
         content_release1 = WSSPContentRelease.objects.get(id=content_release1.id)
-        self.assertEqual(content_release1.version, '1.0.0')
+        self.assertEqual(content_release1.version, '1.0')
 
         # Create ContentRelease Minor Version
         content_release2 = WSSPContentRelease(
@@ -176,97 +177,50 @@ class ModelWithReleaseTests(WagtailPageTests):
         )
         content_release2.save()
         content_release2 = WSSPContentRelease.objects.get(id=content_release2.id)
-        self.assertEqual(content_release2.version, '1.1.0')
+        self.assertEqual(content_release2.version, '1.1')
 
         # Create ContentRelease Patch Version
         content_release3 = WSSPContentRelease(
             title='release3',
             site_code='site1',
-            version_type=2,
-            status=1,
-            publish_datetime=timezone.now() - timezone.timedelta(days=1),
-        )
-        content_release3.save()
-        content_release3 = WSSPContentRelease.objects.get(id=content_release3.id)
-        self.assertEqual(content_release3.version, '1.1.1')
-
-        # Create ContentRelease with duplicate Major Version
-        content_release4 = WSSPContentRelease(
-            title='release4',
-            site_code='site1',
             version_type=0,
             status=1,
             publish_datetime=timezone.now() - timezone.timedelta(days=11),
         )
-        content_release4.save()
+        content_release3.save()
 
-        # content_release1 = 2.0.0
-        # content_release2 = 2.1.0
-        # content_release3 = 2.1.1
-        # content_release4 = 1.0.0
+        # content_release1 = 2.0
+        # content_release2 = 2.1
+        # content_release3 = 1.0
         content_release1 = WSSPContentRelease.objects.get(id=content_release1.id)
-        self.assertEqual(content_release1.version, '2.0.0')
+        self.assertEqual(content_release1.version, '2.0')
         content_release2 = WSSPContentRelease.objects.get(id=content_release2.id)
-        self.assertEqual(content_release2.version, '2.1.0')
+        self.assertEqual(content_release2.version, '2.1')
         content_release3 = WSSPContentRelease.objects.get(id=content_release3.id)
-        self.assertEqual(content_release3.version, '2.1.1')
-        content_release4 = WSSPContentRelease.objects.get(id=content_release4.id)
-        self.assertEqual(content_release4.version, '1.0.0')
+        self.assertEqual(content_release3.version, '1.0')
 
-        # Create ContentRelease with duplicate Minor Version
-        content_release5 = WSSPContentRelease(
-            title='release5',
+        # Create ContentRelease Patch Version
+        content_release4 = WSSPContentRelease(
+            title='release4',
             site_code='site1',
             version_type=1,
             status=1,
-            publish_datetime=timezone.now() - timezone.timedelta(days=4),
+            publish_datetime=timezone.now() - timezone.timedelta(days=6),
         )
-        content_release5.save()
+        content_release4.save()
 
-        # content_release1 = 2.0.0
-        # content_release2 = 2.1.0
-        # content_release3 = 2.1.1
-        # content_release4 = 1.0.0
-        # content_release5 = 2.2.0
+        # content_release1 = 2.0
+        # content_release2 = 2.2
+        # content_release3 = 1.0
+        # content_release4 = 2.1
         content_release1 = WSSPContentRelease.objects.get(id=content_release1.id)
-        self.assertEqual(content_release1.version, '2.0.0')
+        self.assertEqual(content_release1.version, '2.0')
         content_release2 = WSSPContentRelease.objects.get(id=content_release2.id)
-        self.assertEqual(content_release2.version, '2.1.0')
+        self.assertEqual(content_release2.version, '2.2')
         content_release3 = WSSPContentRelease.objects.get(id=content_release3.id)
-        self.assertEqual(content_release3.version, '2.1.1')
+        self.assertEqual(content_release3.version, '1.0')
         content_release4 = WSSPContentRelease.objects.get(id=content_release4.id)
-        self.assertEqual(content_release4.version, '1.0.0')
-        content_release5 = WSSPContentRelease.objects.get(id=content_release5.id)
-        self.assertEqual(content_release5.version, '2.2.0')
-
-        # Create ContentRelease with duplicate Patch Version
-        content_release6 = WSSPContentRelease(
-            title='release6',
-            site_code='site1',
-            version_type=2,
-            status=1,
-            publish_datetime=timezone.now() - timezone.timedelta(days=2),
-        )
-        content_release6.save()
-
-        # content_release1 = 2.0.0
-        # content_release2 = 2.1.0
-        # content_release3 = 2.1.1
-        # content_release4 = 1.0.0
-        # content_release5 = 2.2.0
-        # content_release6 = 2.2.1
-        content_release1 = WSSPContentRelease.objects.get(id=content_release1.id)
-        self.assertEqual(content_release1.version, '2.0.0')
-        content_release2 = WSSPContentRelease.objects.get(id=content_release2.id)
-        self.assertEqual(content_release2.version, '2.1.0')
-        content_release3 = WSSPContentRelease.objects.get(id=content_release3.id)
-        self.assertEqual(content_release3.version, '2.1.1')
-        content_release4 = WSSPContentRelease.objects.get(id=content_release4.id)
-        self.assertEqual(content_release4.version, '1.0.0')
-        content_release5 = WSSPContentRelease.objects.get(id=content_release5.id)
-        self.assertEqual(content_release5.version, '2.2.0')
-        content_release6 = WSSPContentRelease.objects.get(id=content_release6.id)
-        self.assertEqual(content_release6.version, '2.2.1')
+        self.assertEqual(content_release4.version, '2.1')
 
 
 class PageWithReleaseTests(WagtailPageTests):
@@ -615,3 +569,96 @@ class PageWithReleaseTests(WagtailPageTests):
             ).count(),
             3,
         )
+
+    def test_restore_release(self):
+        self.test_page.content_release = self.content_release
+        revision_test_page1_r1 = self.test_page.save_revision(self.user)
+
+        test_page2 = self.test_page.copy(False, self.test_page, {'title': 'Title2'})
+        test_page2.content_release = self.content_release
+        revision_test_page2_r1 = test_page2.save_revision(self.user)
+
+        publisher_api = PublisherAPI()
+        publisher_api.set_live_content_release(self.content_release.site_code, self.content_release.uuid)
+
+        # Create content_release2
+        content_release2 = WSSPContentRelease(
+            title='release2',
+            site_code='site1',
+            version='0.2',
+            status=0,
+        )
+        content_release2.save()
+
+        test_page3 = self.test_page.copy(False, self.test_page, {'slug': 'test_page3', 'title': 'Title3'})
+        test_page3.content_release = content_release2
+        revision_test_page3_r2 = test_page3.save_revision(self.user)
+
+        test_page2.content_release = content_release2
+        revision_test_page2_r2 = test_page2.save_revision(self.user)
+
+        publisher_api = PublisherAPI()
+        publisher_api.set_live_content_release(content_release2.site_code, content_release2.uuid)
+
+        response = publisher_api.compare_content_releases(content_release2.site_code, content_release2.uuid, self.content_release.uuid)
+        comparison = response['content']
+
+        self.assertEqual(comparison, [
+                {
+                    'document_key': str(test_page3.id),
+                    'content_type': 'page',
+                    'diff': 'Added',
+                    'parameters': {'revision_id': str(revision_test_page3_r2.id)}
+                }, {
+                    'document_key': str(test_page2.id),
+                    'content_type': 'page',
+                    'diff': 'Changed',
+                    'parameters': {
+                        'release_from': {'revision_id': str(revision_test_page2_r2.id)},
+                        'release_compare_to': {'revision_id': str(revision_test_page2_r1.id)}
+                    }
+                }, {
+                    'document_key': str(self.test_page.id),
+                    'content_type': 'page',
+                    'diff': 'Removed',
+                    'parameters': {'revision_id': str(revision_test_page1_r1.id)}
+                }
+            ]
+        )
+
+        # Restore content_release
+        c = Client()
+        response = c.post(
+            '/admin/wagtailsnapshotpublisher/wsspcontentrelease/restore/{}/'.format(
+                self.content_release.id,
+            ),
+        )
+
+        restored_release = WSSPContentRelease.objects.get(
+            site_code='site1',
+            restored=True,
+        )
+
+        response = publisher_api.compare_content_releases(restored_release.site_code, restored_release.uuid, content_release2.uuid)
+        comparison = response['content']
+
+        self.assertEqual(comparison, [
+            {
+                'document_key': str(self.test_page.id),
+                'content_type': 'page',
+                'diff': 'Added',
+                'parameters': {'revision_id': str(revision_test_page1_r1.id)}
+            }, {
+                'document_key': str(test_page2.id),
+                'content_type': 'page',
+                'diff': 'Changed',
+                'parameters': {'release_from': {'revision_id': str(revision_test_page2_r1.id)},
+                'release_compare_to': {'revision_id': str(revision_test_page2_r2.id)}}
+            }, {
+                'document_key': str(test_page3.id),
+                'content_type': 'page',
+                'diff': 'Removed',
+                'parameters': {'revision_id': str(revision_test_page3_r2.id)}
+            }
+        ]
+    )

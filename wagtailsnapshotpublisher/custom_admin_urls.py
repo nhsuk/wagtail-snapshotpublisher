@@ -18,4 +18,5 @@ urlpatterns = [
     path('wagtailsnapshotpublisher/wsspcontentrelease/setlive/<int:release_id>/', views.release_set_live, name='release-set-live'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/setlivedetails/<int:release_id>/', views.release_set_live_detail, name='release-set-live-detail'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/archive/<int:release_id>/', views.release_archive, name='release-archive'),
+    path('wagtailsnapshotpublisher/wsspcontentrelease/restore/<int:release_id>/', views.release_restore, name='release-restore'),
 ]
