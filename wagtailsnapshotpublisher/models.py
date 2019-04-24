@@ -46,7 +46,7 @@ class WSSPContentRelease(ContentRelease):
             [
                 FieldPanel('site_code', widget=site_code_widget),
                 ReadOnlyPanel('uuid'),
-                FieldPanel('status'),
+                ReadOnlyPanel('get_status_display', heading='Status'),
                 FieldPanel('title'),
                 FieldPanel('version_type', widget=forms.RadioSelect),
                 ReadOnlyPanel('version'),

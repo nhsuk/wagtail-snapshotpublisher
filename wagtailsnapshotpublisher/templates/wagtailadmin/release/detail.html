@@ -1,7 +1,15 @@
 {% extends "wagtailadmin/base.html" %}
-{% load i18n wagtailadmin_tags %}
+{% load i18n wagtailadmin_tags static %}
+
 
 {% block titletag %}{% if release %}{% blocktrans with title=release.title %}Release detail: {{ title }}{% endblocktrans %}{% else %}{% blocktrans %}Incorrect Release{% endblocktrans %}{% endif %}{% endblock %}
+
+
+{% block js %}
+    {{ block.super }}
+    <script src="{% static 'wagtailadmin/js/vendor/mousetrap.min.js' %}"></script>
+    <script src="{% static 'wagtailadmin/js/page-editor.js' %}"></script>
+{% endblock %}
 
 
 {% block content %}
@@ -11,12 +19,28 @@
     {% if release %}
         {% trans "Release detail: "|add:release.title as revisions_str %}
     {% endif %}
-    {% if release and live_release %}
-        {% trans "COMPARE \""|add:release.title|add:"\" TO \""|add:live_release.title|add:"\"" as revisions_str %}
+    {% if release and release_to_compare_to %}
+        {% trans "COMPARE \""|add:release.title|add:"\" TO \""|add:release_to_compare_to.title|add:"\"" as revisions_str %}
     {% endif %}
     {% include "wagtailadmin/shared/header.html" with title=revisions_str subtitle="" icon="doc-empty-inverse" %}
 
     <div class="nice-padding">
+        {% if compare_with_live %}
+            <h1>Compare with live release</h1>
+        {% endif %}
+
+        {% if frozen_releases_form %}
+            {% if set_live_button %}
+                <form action="{% url 'wagtailsnapshotpublisher_custom_admin:release-set-live-detail' release.id %}" method="post">
+            {% else %}
+                <form action="{% url 'wagtailsnapshotpublisher_custom_admin:release-detail' release.id %}" method="post">
+            {% endif %}
+                {% csrf_token %}
+                {{ frozen_releases_form }}
+                <input class="button" type="submit" value="Compare With">
+            </form>
+        {% endif %}
+
         {% if error_msg %}
             <h1>{{ error_msg }}</h1>
             <ul>
@@ -135,9 +159,49 @@
         
 
         {% if set_live_button %}
-            <a class="button" href="{% url 'wagtailsnapshotpublisher_custom_admin:release-set-live' release.id %}">
-                <span>Set Live</span>
-            </a>
+            <form action="{% url 'wagtailsnapshotpublisher_custom_admin:release-set-live-detail' release.id %}" method="post">
+                <h1>Publish</h1>
+                {% csrf_token %}
+                <ul>
+                    {% for field in publish_release_form %}
+                        <li class="{{ field.name }} {% if field.errors %}error{% endif %}">
+                            <div>
+                                {{ field.label_tag }}
+                                <div class="field-content">
+                                    <div class="input  ">
+                                        {{ field }}
+                                    </div>
+                                </div>
+                                {% for error in field.errors %}
+                                    <p class="error-message">
+                                        {{ error }}
+                                    </p>
+                                {% endfor %}
+                                {% if field.help_text %}
+                                <p class="help">{{ field.help_text|safe }}</p>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <input class="button" type="submit" value="Set Live">
+            </form>
         {% endif %}
     </div>
+
+    <script>
+        $('.publish_datetime').hide();
+
+        if($('input[type=radio][name=publish_type]:checked').val() == 'schedule_date') {
+            $('.publish_datetime').fadeIn();
+        }
+
+        $('input[type=radio][name=publish_type]').change(function () {
+            if($(this).val() == 'schedule_date') {
+                $('.publish_datetime').fadeIn();
+            }else{
+                $('.publish_datetime').fadeOut();
+            }
+        });
+    </script>
 {% endblock %}

@@ -24,7 +24,10 @@ class ReleaseButtonHelper(ButtonHelper):
             pass
         elif not obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
             btns.insert(1, self.detail_revision_button(obj, ['button'], classnames_exclude))
-            btns.insert(2, self.set_live_revision_button(obj, ['button'], classnames_exclude))
+            if obj.status >= 1 and obj.publish_datetime != None:
+                btns.insert(2, self.unfreeze_button(obj, ['button'], classnames_exclude))
+            else:
+                btns.insert(2, self.set_live_revision_button(obj, ['button'], classnames_exclude))
         elif obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
             btns.insert(1, self.archive_revision_button(obj, ['button'], classnames_exclude))
             btns.insert(2, self.restore_button(obj, ['button'], classnames_exclude))
@@ -61,6 +64,10 @@ class ReleaseButtonHelper(ButtonHelper):
         url = reverse('wagtailsnapshotpublisher_custom_admin:release-restore', kwargs={'release_id': obj.pk})
         return self.create_button('restore', 'Restore', url, classnames_add, classnames_exclude)
 
+    def unfreeze_button(self, obj, classnames_add=None, classnames_exclude=None):
+        url = reverse('wagtailsnapshotpublisher_custom_admin:release-unfreeze', kwargs={'release_id': obj.pk})
+        return self.create_button('unfreeze', 'Unfreeze', url, classnames_add, classnames_exclude)
+
 
 class ReleaseAdmin(ModelAdmin):
     model = WSSPContentRelease
@@ -80,6 +87,8 @@ class ReleaseAdmin(ModelAdmin):
             classname = 'is-live'
         elif obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
             classname = 'was-live'
+        elif obj.status == 1 and obj.publish_datetime is not None:
+            classname = 'is-frozen'
 
         return {
             'class': classname,

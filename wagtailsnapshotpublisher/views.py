@@ -9,8 +9,10 @@ from django.utils.translation import ugettext_lazy as _
 
 from wagtail.core.models import Page, PageRevision
 
-from wagtailsnapshotpublisher.models import WSSPContentRelease
 from djangosnapshotpublisher.publisher_api import PublisherAPI
+
+from .models import WSSPContentRelease
+from .forms import PublishReleaseForm, FrozenReleasesForm
 
 
 def unpublish_page(request, page_id, release_id, recursively=False):
@@ -59,20 +61,52 @@ def preview_model(request, content_app, content_class, content_id):
         return HttpResponseServerError('Form is not valid')
 
 
-def release_detail(request, release_id, set_live_button=False):
+def release_detail(request, release_id, set_live_button=False, release_id_to_compare_to=None):
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
-    response = publisher_api.get_live_content_release(release.site_code)
 
+    publish_release_form = PublishReleaseForm()
+    frozen_releases_form = FrozenReleasesForm(release.site_code)
+
+    if request.method == 'POST' and release_id_to_compare_to is None:
+        frozen_releases_form = FrozenReleasesForm(release.site_code, request.POST)
+        if frozen_releases_form.is_valid():
+            # redirect to compare with this release
+            release_id_to_compare_to = frozen_releases_form.cleaned_data['releases']
+            return release_detail(request, release_id, set_live_button, release_id_to_compare_to.id)
+
+    if request.method == 'POST' and release_id_to_compare_to is None:
+        publish_release_form = PublishReleaseForm(request.POST)
+        if publish_release_form.is_valid():
+            publish_type = publish_release_form.cleaned_data['publish_type']
+            publish_datetime = publish_release_form.cleaned_data['publish_datetime']
+
+            if publish_datetime:
+                publish_datetime = publish_datetime.strftime('%Y-%m-%dT%H:%M:%S%z')
+
+            return release_set_live(request, release_id, publish_datetime)
+
+
+    if frozen_releases_form.fields['releases'].queryset is None or not frozen_releases_form.fields['releases'].queryset.exists():
+        frozen_releases_form = None
+
+    # get current live release
+    compare_with_live = True
+    response = publisher_api.get_live_content_release(release.site_code)
     if response['status'] == 'error':
         return render(request, 'wagtailadmin/release/detail.html', {
             'set_live_button': set_live_button,
             'release': release,
             'error_msg': response['error_msg'],
+            'publish_release_form': publish_release_form,
         })
+    release_to_compare_to = response['content']
 
-    live_release = response['content']
-    response = publisher_api.compare_content_releases(release.site_code, release.uuid, live_release.uuid)
+    if release_id_to_compare_to and release_to_compare_to.id != release_id_to_compare_to:
+        compare_with_live = False
+        release_to_compare_to = WSSPContentRelease.objects.get(pk=release_id_to_compare_to)
+
+    response = publisher_api.compare_content_releases(release.site_code, release.uuid, release_to_compare_to.uuid)
     comparison = response['content']
 
     added_pages = []
@@ -91,7 +125,7 @@ def release_detail(request, release_id, set_live_button=False):
                 item['title'] = json.loads(page_revision.content_json)['title']
                 item['page_revision'] = page_revision
                 removed_pages.append(item)
-            if item['diff'] == 'Changed':
+            if item['diff'] == 'Changed' and 'revision_id' in item['parameters']['release_from']:
                 page_revision = PageRevision.objects.get(id=item['parameters']['release_from']['revision_id'])
                 item['page_revision_from'] = page_revision
                 item['page_revision_compare_to'] = PageRevision.objects.get(id=item['parameters']['release_compare_to']['revision_id'])
@@ -108,7 +142,10 @@ def release_detail(request, release_id, set_live_button=False):
         'extra_contents': json.dumps(extra_contents, indent=4) if extra_contents and request.user.has_perm('wagtailadmin.access_dev') else None,
         'set_live_button': set_live_button,
         'release': release,
-        'live_release': live_release,
+        'release_to_compare_to': release_to_compare_to,
+        'publish_release_form': publish_release_form,
+        'frozen_releases_form': frozen_releases_form,
+        'compare_with_live': compare_with_live,
     })
 
 
@@ -116,10 +153,13 @@ def release_set_live_detail(request, release_id):
     return release_detail(request, release_id, set_live_button=True)
 
 
-def release_set_live(request, release_id):
+def release_set_live(request, release_id, publish_date=None):
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
-    publisher_api.set_live_content_release(release.site_code, release.uuid)
+    if publish_date:
+        publisher_api.freeze_content_release(release.site_code, release.uuid, publish_date)
+    else:
+        publisher_api.set_live_content_release(release.site_code, release.uuid)
     WSSPContentRelease.objects.live(
         site_code=release.site_code,
     )
@@ -186,3 +226,15 @@ def release_restore(request, release_id):
     release.save()
 
     return release_set_live(request, release.id)
+
+
+def release_unfreeze(request, release_id):
+    try:
+        release_to_restore = WSSPContentRelease.objects.get(id=release_id)
+        release_to_restore.status = 0
+        release_to_restore.publish_datetime = None
+        release_to_restore.save()
+    except WSSPContentRelease.DoesNotExist:
+        raise Http404(_('This release cannot be restore'))
+    
+    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))

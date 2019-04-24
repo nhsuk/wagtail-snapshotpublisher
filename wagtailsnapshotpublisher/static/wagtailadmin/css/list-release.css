@@ -3,7 +3,7 @@
 }
 
 .listing tbody tr.is-live:hover {
-    background: #B6EDC8;
+    background: rgb(206, 237, 217);
 }
 
 .listing tbody tr.was-live {
@@ -12,4 +12,12 @@
 
 .listing tbody tr.was-live:hover {
     background: #d1d1d1;
+}
+
+.listing tbody tr.is-frozen {
+    background: #fff8ba;
+}
+
+.listing tbody tr.is-frozen:hover {
+    background: #fffbd3;
 }
