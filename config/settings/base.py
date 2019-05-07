@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'wagtail.contrib.settings',
     'wagtail.api.v2',
     'wagtail.contrib.modeladmin',
-    'wagtailmedia',
+    # 'wagtailmedia',
 
     'modelcluster',
     'taggit',
@@ -60,14 +60,14 @@ INSTALLED_APPS = [
     'django_extensions',
     'django.contrib.sitemaps',
     'rest_framework',
-    'debug_toolbar',
+    # 'debug_toolbar',
 
     'djangosnapshotpublisher',
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    # 'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

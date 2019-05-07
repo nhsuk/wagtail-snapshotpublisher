@@ -32,7 +32,7 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    import debug_toolbar
+    # import debug_toolbar
     from django.conf.urls.static import static
     from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
@@ -40,7 +40,7 @@ if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-    # Django debug toolbar
-    urlpatterns = [
-                      url(r'^__debug__/', include(debug_toolbar.urls)),
-                  ] + urlpatterns
+    # # Django debug toolbar
+    # urlpatterns = [
+    #                   url(r'^__debug__/', include(debug_toolbar.urls)),
+    #               ] + urlpatterns

@@ -42,7 +42,7 @@ class ReadOnlyPanel:
         def required_fields(self):
             raise AttributeError
 
-    def bind_to_model(self, model):
+    def bind_to(self, model):
         return type(str(_('ReadOnlyPanel')), (BaseReadOnlyPanel,),
                     {'attr': self.attr, 'heading': self.heading,
                      'classname': self.classname})(heading=self.heading,
@@ -74,7 +74,7 @@ class EditableOnCreatedPanel:
         def required_fields(self):
             raise AttributeError
 
-    def bind_to_model(self, model):
+    def bind_to(self, model):
         return type(str(_('EditableOnCreatedPanel')), (BaseEditableOnCreatedPanel,),
                     {'attr': self.attr, 'heading': self.heading,
                      'classname': self.classname})(field_name=self.attr,
