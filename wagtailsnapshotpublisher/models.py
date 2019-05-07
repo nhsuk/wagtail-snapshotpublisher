@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, Count, Min
+from django.db.models.query import QuerySet
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
@@ -41,6 +42,10 @@ class WSSPContentRelease(ContentRelease):
     version_type = models.IntegerField(choices=VERSION_TYPES, default=1)
     restored = models.BooleanField(default=False)
 
+    structure_to_store = {
+        'fields': ['id'],
+    }
+
     panels = [
         MultiFieldPanel(
             [
@@ -57,12 +62,33 @@ class WSSPContentRelease(ContentRelease):
             [
                 FieldPanel('use_current_live_as_base_release'),
                 FieldPanel('base_release'),
-                FieldPanel('publish_datetime'),
                 HelpPanel(_('If you active the current live release, the base release will be ignore')),
             ],
             heading='Publishing',
         )
     ]
+
+    panels_live_release = [
+        MultiFieldPanel(
+            [
+                ReadOnlyPanel('site_code'),
+                ReadOnlyPanel('uuid'),
+                ReadOnlyPanel('get_status_display', heading='Status'),
+                ReadOnlyPanel('title'),
+                ReadOnlyPanel('version'),
+            ],
+            heading='General',
+        ),
+        MultiFieldPanel(
+            [
+                ReadOnlyPanel('use_current_live_as_base_release'),
+                ReadOnlyPanel('base_release'),
+                ReadOnlyPanel('publish_datetime'),
+            ],
+            heading='Publishing',
+        )
+    ]
+
 
     def __str__(self):
         return '[[{0}]] {1} - {2}__{3}'.format(
@@ -185,6 +211,15 @@ class WithRelease(models.Model):
 
 
     @classmethod
+    def get_dict(cls, item):
+        attrs = model_to_dict(item)
+        try:
+            attrs.update(getattr(item, 'get_extra_attrs')())
+        except AttributeError:
+            pass
+        return attrs
+
+    @classmethod
     def document_parser(cls, item, schema, model_as_dict):
         # get fields and data
         object_dict = {key: value  for key, value in model_as_dict.items() if key in schema['fields']}
@@ -198,21 +233,36 @@ class WithRelease(models.Model):
         # get related fields and data
         if 'related_fields' in schema:
             for related_field in schema['related_fields']:
-                related_field_data = getattr(item, 'test_related_model').all()
-                if related_field_data.exists():
+                related_field_data = None
+                multiple_value = False
+                # check if related_field exist
+                try:
+                    related_field_data = getattr(item, related_field)
+                except AttributeError:
+                    pass
+
+                # check if related_field multiple values 
+                try:
+                    related_field_data = getattr(item, related_field).all()
                     if related_field_data.count() > 1:
-                        object_dict.update(
-                            {
-                                related_field: [cls.document_parser(related_item, related_item.__class__.structure_to_store, model_to_dict(related_item)) for related_item in related_field_data.all()]
-                            }
-                        )
-                    else:
-                        related_item = related_field_data.first()
-                        object_dict.update(
-                            {
-                                related_field: cls.document_parser(related_item, related_item.__class__.structure_to_store, model_to_dict(related_item))
-                            }
-                        )
+                        multiple_value = True
+                    elif related_field_data.count() == 1:
+                        related_field_data = related_field_data.first()
+                except:
+                    pass
+
+                if multiple_value:
+                    object_dict.update(
+                        {
+                            related_field: [cls.document_parser(related_item, related_item.__class__.structure_to_store, cls.get_dict(related_item)) for related_item in related_field_data.all()]
+                        }
+                    )
+                else:
+                    object_dict.update(
+                        {
+                            related_field: cls.document_parser(related_field_data, related_field_data.__class__.structure_to_store, cls.get_dict(related_field_data))
+                        }
+                    )
 
         # get children
         if 'children' in schema:
@@ -231,7 +281,7 @@ class WithRelease(models.Model):
         if not content_release:
             content_release = self.content_release
         
-        object_dict = self.__class__.document_parser(self, self.__class__.structure_to_store, model_to_dict(self))
+        object_dict = self.__class__.document_parser(self, self.__class__.structure_to_store, self.__class__.get_dict(self))
 
         publisher_api = PublisherAPI()
         response = publisher_api.publish_document_to_content_release(
@@ -271,13 +321,13 @@ class WithRelease(models.Model):
 
 
 class ModelWithRelease(WithRelease):
-
-    site_code = models.SlugField(max_length=100)
+    site_code = models.SlugField(max_length=100, blank=True, null=True)
     publish_to_live_release = models.BooleanField(default=False)
 
     panels = [
         FieldPanel('site_code', widget=site_code_widget),
         FieldPanel('publish_to_live_release'),
+        FieldPanel('content_release'),
     ]
 
     class Meta:
@@ -308,6 +358,20 @@ class ModelWithRelease(WithRelease):
             self.publish_to_release()
         super().save(*args, **kwargs)
 
+    @classmethod
+    def get_panel_field(cls, field_name):
+        panels = cls.panels
+        return cls.get_panel_field_from_panels(panels, field_name)
+
+    @classmethod
+    def get_panel_field_from_panels(cls, panels, field_name):
+        for i in range(len(panels)):
+            if hasattr(panels[i], 'field_name') and panels[i].field_name == field_name:
+                return(panels[i])
+            if hasattr(panels[i], 'children'):
+                return cls.get_panel_field_from_panels(panels[i].children, field_name)
+        return None
+
 
 class PageWithRelease(Page, WithRelease):
 
@@ -334,5 +398,5 @@ class PageWithRelease(Page, WithRelease):
 
 
     def serve_preview(self, request, mode_name):
-        object_dict = self.__class__.document_parser(self.specific, self.specific.__class__.structure_to_store, model_to_dict(self.specific))
+        object_dict = self.__class__.document_parser(self.specific, self.specific.__class__.structure_to_store, self.__class__.get_dict(self.specific))
         return JsonResponse(object_dict, encoder=StreamFieldEncoder)

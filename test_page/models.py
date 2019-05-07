@@ -115,11 +115,11 @@ class TestModel(ModelWithRelease):
     panels = ModelWithRelease.panels + [
         FieldPanel('name1'),
         FieldPanel('name2'),
-        FieldPanel('content_release'),
     ]
 
     structure_to_store = {
         'fields': ['name1', 'name2'],
+        'related_fields': ['content_release'],
         'extra': [
             {
                 'name': 'redirects',
@@ -161,13 +161,16 @@ class TestModel(ModelWithRelease):
 def update_site_code_for_content_release(sender, instance, **kwargs):
     from django import forms
     from wagtail.admin.edit_handlers import FieldPanel
-    from wagtailsnapshotpublisher.models import WSSPContentRelease
+    from wagtailsnapshotpublisher.models import WSSPContentRelease, ModelWithRelease
+
+    site_settings = SiteSettings.objects.exclude(title='').values_list('title', 'title')
 
     site_code_widget = forms.Select(
-        choices=tuple(SiteSettings.objects.exclude(title='').values_list('title', 'title')),
+        choices=tuple([('', '---------')] + list(site_settings)),
     )
 
     WSSPContentRelease.get_panel_field('site_code').widget = site_code_widget
+    ModelWithRelease.get_panel_field('site_code').widget = site_code_widget
 
 
 try:

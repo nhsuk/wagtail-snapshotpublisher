@@ -66,6 +66,9 @@ class ModelWithReleaseTests(WagtailPageTests):
             {
                 'name1': 'Test Name1',
                 'name2': 'Test Name2',
+                'content_release': {
+                    'id': self.content_release.id,
+                },
                 'redirects': [{
                     'old_path': '/test',
                     'is_permanent': True,
@@ -114,6 +117,9 @@ class ModelWithReleaseTests(WagtailPageTests):
             {
                 'name1': 'Test Name3',
                 'name2': 'Test Name4',
+                'content_release': {
+                    'id': self.content_release.id,
+                },
                 'redirects': [{
                     'old_path': '/test',
                     'is_permanent': True,

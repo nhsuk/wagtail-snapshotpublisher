@@ -103,6 +103,15 @@ class ReleaseAdmin(ModelAdmin):
 
     def get_queryset(self, request):
         return super(ReleaseAdmin, self).get_queryset(request).exclude(status=2)
+    
+    def get_edit_handler(self, instance, request):
+        from wagtail.admin.edit_handlers import ObjectList
+        panels = self.model.panels
+        if instance.status >= 1 and instance.publish_datetime:
+            panels = self.model.panels_live_release
+        return ObjectList(panels)
+
+    edit_template_name = 'modeladmin/edit_release.html'
 
 modeladmin_register(ReleaseAdmin)
 

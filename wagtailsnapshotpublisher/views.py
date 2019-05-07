@@ -55,9 +55,10 @@ def preview_model(request, content_app, content_class, content_id):
     form = form_class(request.POST)
     if form.is_valid():
         instance = form.save(commit=False)
-        object_dict = model_class.document_parser(instance, model_class.structure_to_store, model_to_dict(instance))
+        object_dict = model_class.document_parser(instance, model_class.structure_to_store, model_class.get_dict(instance))
         return JsonResponse(object_dict)
     else:
+        print(form.errors)
         return HttpResponseServerError('Form is not valid')
 
 
