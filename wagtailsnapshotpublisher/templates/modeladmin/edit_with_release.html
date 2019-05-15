@@ -31,16 +31,27 @@
     </div>
 
     {% if 'content_release' in form.fields %}
-        <li class="preview">
-            <button class="button action-model-preview icon icon-view" data-submit="{% url 'wagtailsnapshotpublisher_custom_admin:preview-model-admin' instance.get_app instance.get_class instance.id %}" data-auto-update="false">Preview</button>
-        </li>
+        {% if instance.preview_modes|length > 1 %}
+            <li class="preview">
+                {% for mode_name, mode_display_name in instance.preview_modes %}
+
+                    <button class="button action-model-preview icon icon-view" data-submit="{% url 'wagtailsnapshotpublisher_custom_admin:preview-model-admin' instance.get_app instance.get_class instance.id mode_name %}" data-auto-update="false">{{mode_display_name}} Preview</button>
+                {% endfor %}
+            </li>
+        {% else %}
+            <li class="preview">
+                <button class="button action-model-preview icon icon-view" data-submit="{% url 'wagtailsnapshotpublisher_custom_admin:preview-model-admin' instance.get_app instance.get_class instance.id 'default' %}" data-auto-update="false">Preview</button>
+            </li>
+        {% endif %}
 
         <script>
             let preview = false;
+            let preview_url = null;
             const siteCode = '__all__';
 
             $(".action-model-preview").click(function (e) {
                 preview = true
+                preview_url = $(this).data("submit")
                 e.preventDefault();
                 $(this).closest("form").submit();
             });
@@ -52,14 +63,14 @@
                     preview = false;
                     var formdata = new FormData(this);
                     $.ajax({
-                        url: $(".action-model-preview").data("submit"),
+                        url: preview_url,
                         data: formdata,
                         processData: false,
                         contentType: false,
                         type: "POST",
                         dataType: "text",
                         success: function (){
-                            form.attr("action", $(".action-model-preview").data("submit"));
+                            form.attr("action", preview_url);
                             form.attr("target", "_blank");
                             form.submit();
                             form.attr("action", form_target);

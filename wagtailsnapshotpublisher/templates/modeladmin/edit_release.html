@@ -1,0 +1,7 @@
+{% extends "modeladmin/edit.html" %}
+
+{% block footer %}
+    {% if instance.status == 0 and instance.publish_datetime == None %}
+        {{ block.super }}
+    {% endif %}
+{% endblock %}

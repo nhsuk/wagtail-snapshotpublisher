@@ -12,7 +12,7 @@ urlpatterns = [
     path('pages/<int:page_id>/remove/<int:release_id>/recursively/', views.remove_recursively_page, name='remove-recursively-page-from-release'),
 
     path('<slug:content_app>/<slug:content_class>/unpublish/<int:content_id>/<int:release_id>/', views.unpublish, name='unpublish-from-release'),
-    path('<slug:content_app>/<slug:content_class>/edit/<int:content_id>/preview/', views.preview_model, name='preview-model-admin'),
+    path('<slug:content_app>/<slug:content_class>/edit/<int:content_id>/preview/<slug:preview_mode>/', views.preview_model, name='preview-model-admin'),
 
     path('wagtailsnapshotpublisher/wsspcontentrelease/details/<int:release_id>/', views.release_detail, name='release-detail'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/setlive/<int:release_id>/', views.release_set_live, name='release-set-live'),

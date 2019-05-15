@@ -55,9 +55,10 @@ class ModelWithReleaseTests(WagtailPageTests):
 
         self.assertEqual(response.status_code, 302)
 
+        serializers = self.test_model.get_serializers()
         release_document = ReleaseDocument.objects.get(
-            document_key=self.test_model.get_key(),
-            content_type=self.test_model.get_name_slug(),
+            document_key=serializers['default']['key'],
+            content_type=serializers['default']['type'],
             content_releases=self.content_release,
         )
 
@@ -66,9 +67,7 @@ class ModelWithReleaseTests(WagtailPageTests):
             {
                 'name1': 'Test Name1',
                 'name2': 'Test Name2',
-                'content_release': {
-                    'id': self.content_release.id,
-                },
+                'content_release':  self.content_release.id,
                 'redirects': [{
                     'old_path': '/test',
                     'is_permanent': True,
@@ -106,9 +105,10 @@ class ModelWithReleaseTests(WagtailPageTests):
         )
         self.assertEqual(response.status_code, 302)
 
+        serializers = self.test_model.get_serializers()
         release_document = ReleaseDocument.objects.get(
-            document_key=self.test_model.get_key(),
-            content_type=self.test_model.get_name_slug(),
+            document_key=serializers['default']['key'],
+            content_type=serializers['default']['type'],
             content_releases=self.content_release,
         )
 
@@ -117,9 +117,7 @@ class ModelWithReleaseTests(WagtailPageTests):
             {
                 'name1': 'Test Name3',
                 'name2': 'Test Name4',
-                'content_release': {
-                    'id': self.content_release.id,
-                },
+                'content_release':  self.content_release.id,
                 'redirects': [{
                     'old_path': '/test',
                     'is_permanent': True,
@@ -152,9 +150,16 @@ class ModelWithReleaseTests(WagtailPageTests):
 
         self.assertEqual(response.status_code, 302)
 
+        serializers = self.test_model.get_serializers()
         self.assertFalse(ReleaseDocument.objects.filter(
-                document_key=self.test_model.get_key(),
-                content_type=self.test_model.get_name_slug(),
+                document_key=serializers['default']['key'],
+                content_type=serializers['default']['type'],
+                content_releases=self.content_release,
+            ).exists()
+        )
+        self.assertFalse(ReleaseDocument.objects.filter(
+                document_key=serializers['cover']['key'],
+                content_type=serializers['cover']['type'],
                 content_releases=self.content_release,
             ).exists()
         )
@@ -290,94 +295,17 @@ class PageWithReleaseTests(WagtailPageTests):
         )
         self.test_related_model.save()
 
-        simple_richtext_schema = {
-            'type' : 'object',
-            'required': ['type', 'value'],
-            'properties' : {
-                'type': {'type' : 'string'},
-                'id': {
-                    'type' : 'string',
-                    'pattern': '^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$'
-                },
-                'value': {
-                    'type' : 'object',
-                    'required': ['title', 'body'],
-                    'properties' : {
-                        'title': {'type' : 'string'},
-                        'body':{'type' : 'string'},
-                    },
-                },
-            },
-        }
-
         self.test_page_schema = {
             'type' : 'object',
-            'required': ['title', 'name1', 'test_related_model', 'child1', 'child3', 'body'],
+            'required': ['title', 'name1', 'test_related_model', 'body'],
             'properties' : {
                 'title' : {'type' : 'string'},
                 'name1' : {'type' : 'string'},
                 'test_related_model': {
-                    'type' : 'object',
-                    'required': ['name'],
-                    'properties' : {
-                        'name': {'type' : 'string'},
-                    },
-                },
-                'child1': {
-                    'type' : 'object',
-                    'required': ['name1', 'test_related_model', 'child2'],
-                    'properties' : {
-                        'name1': {'type' : 'string'},
-                        'test_related_model': {
-                            'type' : 'object',
-                            'required': ['name'],
-                            'properties' : {
-                                'name': {'type' : 'string'},
-                            }
-                        },
-                        'child2': {
-                            'type' : 'object',
-                            'required': ['name2'],
-                            'properties' : {
-                                'name2': {'type' : 'string'},
-                            }
-                        },
-                    },
-                },
-                'child3':{
-                    'type' : 'object',
-                    'required': ['name2'],
-                    'properties' : {
-                        'name2': {'type' : 'string'},
-                    },
+                    'type' : 'array',
                 },
                 'body':{
                     'type' : 'array',
-                    "items": [
-                        simple_richtext_schema,
-                        {
-                            'type' : 'object',
-                            'required': ['type', 'id', 'value'],
-                            'properties' : {
-                                'type': {'type' : 'string'},
-                                'id': {
-                                    'type' : 'string',
-                                    'pattern': '^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$'
-                                },
-                                'value': {
-                                    'type' : 'object',
-                                    'required': ['title', 'body'],
-                                    'properties' : {
-                                        'title': {'type' : 'string'},
-                                        'body':{
-                                            'type' : 'array',
-                                            'items': simple_richtext_schema,
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    ]
                 },
             },
         }
@@ -387,9 +315,10 @@ class PageWithReleaseTests(WagtailPageTests):
         # Publish TestPage to a release
         self.test_page.save_revision(self.user)
 
+        serializers = self.test_page.get_serializers()
         release_document = ReleaseDocument.objects.get(
-            document_key=self.test_page.get_key(),
-            content_type=self.test_page.get_name_slug(),
+            document_key=serializers['default']['key'],
+            content_type=serializers['default']['type'],
             content_releases=self.content_release,
         )
 
@@ -438,9 +367,10 @@ class PageWithReleaseTests(WagtailPageTests):
         # Republish TestPage to a release
         self.test_page.save_revision(self.user)
 
+        serializers = self.test_page.get_serializers()
         release_document = ReleaseDocument.objects.get(
-            document_key=self.test_page.get_key(),
-            content_type=self.test_page.get_name_slug(),
+            document_key=serializers['default']['key'],
+            content_type=serializers['default']['type'],
             content_releases=self.content_release,
         )
 
@@ -452,17 +382,6 @@ class PageWithReleaseTests(WagtailPageTests):
 
         self.assertEqual(document['title'], 'Title2')
         self.assertEqual(document['name1'], 'Test Name3')
-        self.assertEqual(document['child3']['name2'], 'Test Name4')
-        self.assertEqual(document['test_related_model']['name'], 'Test Related Name2')
-        self.assertEqual(document['body'][0]['type'], 'simple_richtext')
-        self.assertEqual(document['body'][0]['value']['title'], 'Simple Rich Text Title3')
-        self.assertEqual(document['body'][0]['value']['body'], 'Simple Rich Text Body3')
-        self.assertEqual(document['body'][1]['type'], 'block_list')
-        self.assertEqual(document['body'][1]['value']['title'], 'Block List Title2')
-
-        self.assertEqual(document['body'][1]['value']['body'][0]['type'], 'simple_richtext')
-        self.assertEqual(document['body'][1]['value']['body'][0]['value']['title'], 'Simple Rich Text Title4')
-        self.assertEqual(document['body'][1]['value']['body'][0]['value']['body'], 'Simple Rich Text Body4')
 
     def test_update_unpublish(self):
         # Publish TestPage to a release
@@ -479,12 +398,21 @@ class PageWithReleaseTests(WagtailPageTests):
 
         self.assertEqual(response.status_code, 302)
 
+
+        serializers = self.test_page.get_serializers()
         self.assertFalse(ReleaseDocument.objects.filter(
-                document_key=self.test_page.get_key(),
-                content_type=self.test_page.get_name_slug(),
+                document_key=serializers['default']['key'],
+                content_type=serializers['default']['type'],
                 content_releases=self.content_release,
             ).exists()
         )
+        self.assertFalse(ReleaseDocument.objects.filter(
+                document_key=serializers['cover']['key'],
+                content_type=serializers['cover']['type'],
+                content_releases=self.content_release,
+            ).exists()
+        )
+
 
     def test_unpublish_recursively(self):
         # -homepage
@@ -501,7 +429,8 @@ class PageWithReleaseTests(WagtailPageTests):
         test_page2.save_revision(self.user)
         test_page3.save_revision(self.user)
 
-        self.assertEqual(ReleaseDocument.objects.count(), 4)
+        self.assertEqual(ReleaseDocument.objects.filter(content_type='page').count(), 4)
+        self.assertEqual(ReleaseDocument.objects.filter(content_type='cover').count(), 4)
 
         # Unpublish TestPage recursively to a release
         c = Client()
@@ -512,11 +441,14 @@ class PageWithReleaseTests(WagtailPageTests):
             ),
         )
 
-        self.assertEqual(ReleaseDocument.objects.count(), 1)
+        self.assertEqual(ReleaseDocument.objects.filter(content_type='page').count(), 1)
+        self.assertEqual(ReleaseDocument.objects.filter(content_type='cover').count(), 1)
 
-        ReleaseDocument.objects.get(
-            document_key=test_page1.get_key(),
-            content_type=test_page1.get_name_slug(),
+        serializers = test_page1.get_serializers()
+        release_document = ReleaseDocument.objects.get(
+            document_key=serializers['default']['key'],
+            content_type=serializers['default']['type'],
+            content_releases=self.content_release,
         )
 
     def test_update_remove(self):
@@ -534,9 +466,18 @@ class PageWithReleaseTests(WagtailPageTests):
 
         self.assertEqual(response.status_code, 302)
 
+        serializers = self.test_page.get_serializers()
         self.assertEqual(ReleaseDocument.objects.filter(
-                document_key=self.test_page.get_key(),
-                content_type=self.test_page.get_name_slug(),
+                document_key=serializers['default']['key'],
+                content_type=serializers['default']['type'],
+                content_releases=self.content_release,
+                deleted=True
+            ).count(),
+            1,
+        )
+        self.assertEqual(ReleaseDocument.objects.filter(
+                document_key=serializers['default']['key'],
+                content_type=serializers['default']['type'],
                 content_releases=self.content_release,
                 deleted=True
             ).count(),
@@ -558,7 +499,8 @@ class PageWithReleaseTests(WagtailPageTests):
         test_page2.save_revision(self.user)
         test_page3.save_revision(self.user)
 
-        self.assertEqual(ReleaseDocument.objects.count(), 4)
+        self.assertEqual(ReleaseDocument.objects.filter(content_type='page').count(), 4)
+        self.assertEqual(ReleaseDocument.objects.filter(content_type='cover').count(), 4)
 
         # Remove TestPage recursively to a release
         c = Client()
@@ -571,7 +513,16 @@ class PageWithReleaseTests(WagtailPageTests):
 
         self.assertEqual(ReleaseDocument.objects.filter(
                 content_releases=self.content_release,
-                deleted=True
+                deleted=True,
+                content_type='page',
+            ).count(),
+            3,
+        )
+
+        self.assertEqual(ReleaseDocument.objects.filter(
+                content_releases=self.content_release,
+                deleted=True,
+                content_type='cover',
             ).count(),
             3,
         )
@@ -612,9 +563,22 @@ class PageWithReleaseTests(WagtailPageTests):
         self.assertEqual(comparison, [
                 {
                     'document_key': str(test_page3.id),
+                    'content_type': 'cover',
+                    'diff': 'Added',
+                     'parameters': {'revision_id': str(revision_test_page3_r2.id)}
+                }, {
+                    'document_key': str(test_page3.id),
                     'content_type': 'page',
                     'diff': 'Added',
                     'parameters': {'revision_id': str(revision_test_page3_r2.id)}
+                }, {
+                    'document_key': str(test_page2.id),
+                    'content_type': 'cover',
+                    'diff': 'Changed',
+                    'parameters': {
+                        'release_from': {'revision_id': str(revision_test_page2_r2.id)},
+                        'release_compare_to': {'revision_id': str(revision_test_page2_r1.id)}
+                    }
                 }, {
                     'document_key': str(test_page2.id),
                     'content_type': 'page',
@@ -623,6 +587,11 @@ class PageWithReleaseTests(WagtailPageTests):
                         'release_from': {'revision_id': str(revision_test_page2_r2.id)},
                         'release_compare_to': {'revision_id': str(revision_test_page2_r1.id)}
                     }
+                }, {
+                    'document_key': str(self.test_page.id),
+                    'content_type': 'cover',
+                    'diff': 'Removed',
+                    'parameters': {'revision_id': str(revision_test_page1_r1.id)}
                 }, {
                     'document_key': str(self.test_page.id),
                     'content_type': 'page',
@@ -651,15 +620,31 @@ class PageWithReleaseTests(WagtailPageTests):
         self.assertEqual(comparison, [
             {
                 'document_key': str(self.test_page.id),
+                'content_type': 'cover',
+                'diff': 'Added',
+                'parameters': {'revision_id': str(revision_test_page1_r1.id)}
+            }, {
+                'document_key': str(self.test_page.id),
                 'content_type': 'page',
                 'diff': 'Added',
                 'parameters': {'revision_id': str(revision_test_page1_r1.id)}
+            }, {
+                'document_key': str(test_page2.id),
+                'content_type': 'cover',
+                'diff': 'Changed',
+                'parameters': {'release_from': {'revision_id': str(revision_test_page2_r1.id)},
+                'release_compare_to': {'revision_id': str(revision_test_page2_r2.id)}}
             }, {
                 'document_key': str(test_page2.id),
                 'content_type': 'page',
                 'diff': 'Changed',
                 'parameters': {'release_from': {'revision_id': str(revision_test_page2_r1.id)},
                 'release_compare_to': {'revision_id': str(revision_test_page2_r2.id)}}
+            }, {
+                'document_key': str(test_page3.id),
+                'content_type': 'cover',
+                'diff': 'Removed',
+                'parameters': {'revision_id': str(revision_test_page3_r2.id)}
             }, {
                 'document_key': str(test_page3.id),
                 'content_type': 'page',

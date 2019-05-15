@@ -49,14 +49,15 @@ def remove(request, content_app, content_class, content_id, release_id):
     return redirect('/admin/{}/{}/'.format(content_app, content_class))
 
 
-def preview_model(request, content_app, content_class, content_id):
+def preview_model(request, content_app, content_class, content_id, preview_mode='default'):
     model_class = apps.get_model(content_app, content_class)
     form_class = modelform_factory(model_class, fields=[field.name for field in model_class._meta.get_fields()])
     form = form_class(request.POST)
     if form.is_valid():
         instance = form.save(commit=False)
-        object_dict = model_class.document_parser(instance, model_class.structure_to_store, model_class.get_dict(instance))
-        return JsonResponse(object_dict)
+        serializers = instance.get_serializers()
+        serialized_page = serializers[preview_mode]['class'](instance=instance)
+        return JsonResponse(serialized_page.data)
     else:
         print(form.errors)
         return HttpResponseServerError('Form is not valid')

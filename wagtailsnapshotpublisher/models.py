@@ -19,7 +19,6 @@ from wagtail.core.models import Page, PageRevision
 from djangosnapshotpublisher.models import ContentRelease
 from djangosnapshotpublisher.publisher_api import PublisherAPI
 
-from .json_encoder import StreamFieldEncoder
 from .panels import ReadOnlyPanel
 
 
@@ -33,7 +32,6 @@ if settings.SITE_CODE_CHOICES:
 VERSION_TYPES = (
     (0, 'MAJOR'),
     (1, 'MINOR'),
-    # (2, 'PATCH'),
 )
 
 
@@ -210,88 +208,27 @@ class WithRelease(models.Model):
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-    @classmethod
-    def get_dict(cls, item):
-        attrs = model_to_dict(item)
-        try:
-            attrs.update(getattr(item, 'get_extra_attrs')())
-        except AttributeError:
-            pass
-        return attrs
-
-    @classmethod
-    def document_parser(cls, item, schema, model_as_dict):
-        # get fields and data
-        object_dict = {key: value  for key, value in model_as_dict.items() if key in schema['fields']}
-
-        if 'extra' in schema:
-            for extra in schema['extra']:
-                object_dict.update({
-                    extra['name']: getattr(item, extra['function'])(),
-                })
-
-        # get related fields and data
-        if 'related_fields' in schema:
-            for related_field in schema['related_fields']:
-                related_field_data = None
-                multiple_value = False
-                # check if related_field exist
-                try:
-                    related_field_data = getattr(item, related_field)
-                except AttributeError:
-                    pass
-
-                # check if related_field multiple values 
-                try:
-                    related_field_data = getattr(item, related_field).all()
-                    if related_field_data.count() > 1:
-                        multiple_value = True
-                    elif related_field_data.count() == 1:
-                        related_field_data = related_field_data.first()
-                except:
-                    pass
-
-                if multiple_value:
-                    object_dict.update(
-                        {
-                            related_field: [cls.document_parser(related_item, related_item.__class__.structure_to_store, cls.get_dict(related_item)) for related_item in related_field_data.all()]
-                        }
-                    )
-                else:
-                    object_dict.update(
-                        {
-                            related_field: cls.document_parser(related_field_data, related_field_data.__class__.structure_to_store, cls.get_dict(related_field_data))
-                        }
-                    )
-
-        # get children
-        if 'children' in schema:
-            for schema_child in schema['children']:
-                object_dict.update(
-                    {schema_child['name']: cls.document_parser(item, schema_child, model_as_dict)}
-                )
-
-        return object_dict
-
-
     def publish_to_release(self, instance=None, content_release=None, extra_parameters=None):
         if not instance:
             instance = self
 
         if not content_release:
             content_release = self.content_release
-        
-        object_dict = self.__class__.document_parser(self, self.__class__.structure_to_store, self.__class__.get_dict(self))
 
-        publisher_api = PublisherAPI()
-        response = publisher_api.publish_document_to_content_release(
-            content_release.site_code,
-            content_release.uuid,
-            json.dumps(object_dict, cls=StreamFieldEncoder),
-            self.get_key(),
-            self.get_name_slug(),
-            extra_parameters,
-        )
+        serializers = self.get_serializers()
+
+        for key, serializer_item in serializers.items():
+            serialized_page = serializer_item['class'](instance=self)
+
+            publisher_api = PublisherAPI()
+            response = publisher_api.publish_document_to_content_release(
+                content_release.site_code,
+                content_release.uuid,
+                json.dumps(serialized_page.data),
+                serializer_item['key'],
+                serializer_item['type'],
+                extra_parameters,
+            )
 
     def unpublish_or_delete_from_release(self, release_id=None, recursively=False, delete=False):
         if not release_id:
@@ -307,17 +244,19 @@ class WithRelease(models.Model):
             content_release = WSSPContentRelease.objects.get(id=release_id)
             publisher_api = PublisherAPI()
 
-            paramaters = {
-                'site_code': content_release.site_code,
-                'release_uuid': content_release.uuid,
-                'document_key': self.get_key(),
-                'content_type': self.get_name_slug(),
-            }
+            serializers = self.get_serializers()
+            for key, serializer_item in serializers.items():
+                paramaters = {
+                    'site_code': content_release.site_code,
+                    'release_uuid': content_release.uuid,
+                    'document_key': serializer_item['key'],
+                    'content_type': serializer_item['type'],
+                }
 
-            if delete:
-                reponse = publisher_api.delete_document_from_content_release(**paramaters)
-            else:
-                reponse = publisher_api.unpublish_document_from_content_release(**paramaters)
+                if delete:
+                    reponse = publisher_api.delete_document_from_content_release(**paramaters)
+                else:
+                    reponse = publisher_api.unpublish_document_from_content_release(**paramaters)
 
 
 class ModelWithRelease(WithRelease):
@@ -332,6 +271,9 @@ class ModelWithRelease(WithRelease):
 
     class Meta:
         abstract = True
+
+    def get_serializers(self):
+        return []
 
     def get_app(self):
         return self.__class__._meta.app_label
@@ -381,6 +323,13 @@ class PageWithRelease(Page, WithRelease):
     def get_name_slug(self):
         return 'page'
 
+    def serve_preview(self, request, mode_name='default'):
+        serializers = self.get_serializers()
+        mode_name = mode_name if mode_name else 'default'
+        
+        serialized_page = serializers[mode_name]['class'](instance=self)
+        return JsonResponse(serialized_page.data)
+
     def save_revision(self, user=None, submitted_for_moderation=False, approved_go_live_at=None, changed=True):
         assigned_release = self.content_release
         self.content_release = None
@@ -395,8 +344,3 @@ class PageWithRelease(Page, WithRelease):
                 self.publish_to_release(page, assigned_release, {'revision_id': revision.id})
 
         return revision
-
-
-    def serve_preview(self, request, mode_name):
-        object_dict = self.__class__.document_parser(self.specific, self.specific.__class__.structure_to_store, self.__class__.get_dict(self.specific))
-        return JsonResponse(object_dict, encoder=StreamFieldEncoder)

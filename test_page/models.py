@@ -29,17 +29,12 @@ class SimpleRichText(blocks.StructBlock):
     title = blocks.CharBlock(required=True)
     body = blocks.RichTextBlock(required=False)
 
-    fields_to_store = ['title', 'body']
-
-
 
 class BlockList(blocks.StructBlock):
     title = blocks.CharBlock(required=True)
     body = blocks.StreamBlock([
         ('simple_richtext', SimpleRichText(icon='title')),
     ], null=True)
-
-    fields_to_store = ['title', 'body']
 
 
 class TestRelatedModel(models.Model):
@@ -49,10 +44,6 @@ class TestRelatedModel(models.Model):
     panels = [
         FieldPanel('name'),
     ]
-
-    structure_to_store = {
-        'fields': ['name'],
-    }
 
 
 class TestPage(PageWithRelease):
@@ -77,26 +68,42 @@ class TestPage(PageWithRelease):
         FieldPanel('content_release'),
     ]
 
-    structure_to_store = {
-        'fields': ['title', 'name1', 'body'],
-        'related_fields': ['test_related_model'],
-        'children': [{
-            'name': 'child1',
-            'fields': ['name1'],
-            'related_fields': ['test_related_model'],
-            'children': [{
-                'name': 'child2',
-                'fields': ['name2'],
-            }]
-        }, {
-             'name': 'child3',
-            'fields': ['name2'],
-        }],
-    }
-
     @property
     def site_code(self):
         return SiteSettings.objects.get(site=self.get_site()).title
+
+    def get_serializers(self):
+        from .serializers import TestPageSerializer, TestPageCoverSerializer
+        return {
+            'default': {
+                'key': self.get_key(),
+                'type': self.get_name_slug(),
+                'class': TestPageSerializer,
+            },
+            'cover': {
+                'key': self.get_key(),
+                'type': 'cover',
+                'class': TestPageCoverSerializer,
+            }
+        }
+
+    @property
+    def preview_modes(self):
+        """
+        A list of (internal_name, display_name) tuples for the modes in which
+        this page can be displayed for preview/moderation purposes. Ordinarily a page
+        will only have one display mode, but subclasses of Page can override this -
+        for example, a page containing a form might have a default view of the form,
+        and a post-submission 'thankyou' page
+        """
+        return [
+            ('default', 'Default'),
+            ('cover', 'Cover'),
+        ]
+
+    @property
+    def default_preview_mode(self):
+        return self.preview_modes[0][0]
 
 
 # TestPage.release_config['can_publish_to_release'] = True
@@ -117,16 +124,20 @@ class TestModel(ModelWithRelease):
         FieldPanel('name2'),
     ]
 
-    structure_to_store = {
-        'fields': ['name1', 'name2'],
-        'related_fields': ['content_release'],
-        'extra': [
-            {
-                'name': 'redirects',
-                'function': 'get_redirections',
-            },
-        ],
-    }
+    def get_serializers(self):
+        from .serializers import TestModelSerializer, TestModelCoverSerializer
+        return {
+            'default': {
+                'key': self.get_key(),
+                'type': self.get_name_slug(),
+                'class': TestModelSerializer,
+            }, 
+            'cover': {
+                'key': self.get_key(),
+                'type': 'cover',
+                'class': TestModelCoverSerializer,
+            }
+        }
 
     def get_key(self):
         return 'test_model'
@@ -151,6 +162,20 @@ class TestModel(ModelWithRelease):
             redirect_objects.append(redirect_object)
         
         return redirect_objects
+
+    @property
+    def preview_modes(self):
+        """
+        A list of (internal_name, display_name) tuples for the modes in which
+        this page can be displayed for preview/moderation purposes. Ordinarily a page
+        will only have one display mode, but subclasses of Page can override this -
+        for example, a page containing a form might have a default view of the form,
+        and a post-submission 'thankyou' page
+        """
+        return [
+            ('default', 'Default'),
+            ('cover', 'Cover'),
+        ]
 
 # TestPage.release_config['can_publish_to_release'] = False
 # TestPage.release_config['can_publish_to_live_release'] = False
