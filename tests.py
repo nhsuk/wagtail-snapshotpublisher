@@ -67,6 +67,7 @@ class ModelWithReleaseTests(WagtailPageTests):
             {
                 'name1': 'Test Name1',
                 'name2': 'Test Name2',
+                'body': [],
                 'content_release':  self.content_release.id,
                 'redirects': [{
                     'old_path': '/test',
@@ -117,6 +118,7 @@ class ModelWithReleaseTests(WagtailPageTests):
             {
                 'name1': 'Test Name3',
                 'name2': 'Test Name4',
+                'body': [],
                 'content_release':  self.content_release.id,
                 'redirects': [{
                     'old_path': '/test',
@@ -565,38 +567,62 @@ class PageWithReleaseTests(WagtailPageTests):
                     'document_key': str(test_page3.id),
                     'content_type': 'cover',
                     'diff': 'Added',
-                     'parameters': {'revision_id': str(revision_test_page3_r2.id)}
+                    'parameters': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page3_r2.id),
+                    }
                 }, {
                     'document_key': str(test_page3.id),
                     'content_type': 'page',
                     'diff': 'Added',
-                    'parameters': {'revision_id': str(revision_test_page3_r2.id)}
+                    'parameters': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page3_r2.id),
+                    }
                 }, {
                     'document_key': str(test_page2.id),
                     'content_type': 'cover',
                     'diff': 'Changed',
                     'parameters': {
-                        'release_from': {'revision_id': str(revision_test_page2_r2.id)},
-                        'release_compare_to': {'revision_id': str(revision_test_page2_r1.id)}
+                        'release_from': {
+                            'have_dynamic_elements': 'False',
+                            'revision_id': str(revision_test_page2_r2.id),
+                        },
+                        'release_compare_to': {
+                            'have_dynamic_elements': 'False',
+                            'revision_id': str(revision_test_page2_r1.id),
+                        }
                     }
                 }, {
                     'document_key': str(test_page2.id),
                     'content_type': 'page',
                     'diff': 'Changed',
                     'parameters': {
-                        'release_from': {'revision_id': str(revision_test_page2_r2.id)},
-                        'release_compare_to': {'revision_id': str(revision_test_page2_r1.id)}
+                        'release_from': {
+                            'have_dynamic_elements': 'False',
+                            'revision_id': str(revision_test_page2_r2.id),
+                        },
+                        'release_compare_to': {
+                            'have_dynamic_elements': 'False',
+                            'revision_id': str(revision_test_page2_r1.id),
+                        }
                     }
                 }, {
                     'document_key': str(self.test_page.id),
                     'content_type': 'cover',
                     'diff': 'Removed',
-                    'parameters': {'revision_id': str(revision_test_page1_r1.id)}
+                    'parameters': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page1_r1.id),
+                    }
                 }, {
                     'document_key': str(self.test_page.id),
                     'content_type': 'page',
                     'diff': 'Removed',
-                    'parameters': {'revision_id': str(revision_test_page1_r1.id)}
+                    'parameters': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page1_r1.id),
+                    }
                 }
             ]
         )
@@ -622,34 +648,62 @@ class PageWithReleaseTests(WagtailPageTests):
                 'document_key': str(self.test_page.id),
                 'content_type': 'cover',
                 'diff': 'Added',
-                'parameters': {'revision_id': str(revision_test_page1_r1.id)}
+                'parameters': {
+                    'have_dynamic_elements': 'False',
+                    'revision_id': str(revision_test_page1_r1.id),
+                }
             }, {
                 'document_key': str(self.test_page.id),
                 'content_type': 'page',
                 'diff': 'Added',
-                'parameters': {'revision_id': str(revision_test_page1_r1.id)}
+                'parameters': {
+                    'have_dynamic_elements': 'False',
+                    'revision_id': str(revision_test_page1_r1.id),
+                }
             }, {
                 'document_key': str(test_page2.id),
                 'content_type': 'cover',
                 'diff': 'Changed',
-                'parameters': {'release_from': {'revision_id': str(revision_test_page2_r1.id)},
-                'release_compare_to': {'revision_id': str(revision_test_page2_r2.id)}}
+                'parameters': {
+                    'release_from': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page2_r1.id),
+                    },
+                    'release_compare_to': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page2_r2.id),
+                    }
+                }
             }, {
                 'document_key': str(test_page2.id),
                 'content_type': 'page',
                 'diff': 'Changed',
-                'parameters': {'release_from': {'revision_id': str(revision_test_page2_r1.id)},
-                'release_compare_to': {'revision_id': str(revision_test_page2_r2.id)}}
+                'parameters': {
+                    'release_from': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page2_r1.id),
+                    },
+                    'release_compare_to': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page2_r2.id),
+                    }
+                }
             }, {
                 'document_key': str(test_page3.id),
                 'content_type': 'cover',
                 'diff': 'Removed',
-                'parameters': {'revision_id': str(revision_test_page3_r2.id)}
+                'parameters': {
+                    'have_dynamic_elements': 'False',
+                    'revision_id': str(revision_test_page3_r2.id),
+                }
             }, {
                 'document_key': str(test_page3.id),
                 'content_type': 'page',
                 'diff': 'Removed',
-                'parameters': {'revision_id': str(revision_test_page3_r2.id)}
+                'parameters': {
+                    'have_dynamic_elements': 'False',
+                    'revision_id': str(revision_test_page3_r2.id),
+                }
             }
         ]
     )

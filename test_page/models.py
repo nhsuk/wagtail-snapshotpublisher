@@ -5,6 +5,7 @@ from django.db.models.signals import post_save, post_delete
 from django.db.utils import ProgrammingError
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
+from django.template.defaultfilters import slugify
 
 from wagtail.admin.edit_handlers import FieldPanel, StreamFieldPanel, InlinePanel
 from wagtail.api import APIField
@@ -13,16 +14,34 @@ from wagtail.contrib.settings.models import BaseSetting, register_setting
 from wagtail.core import blocks
 from wagtail.core.fields import StreamField
 from wagtail.core.models import Page
-from wagtail.snippets.models import register_snippet
 
 from wagtailsnapshotpublisher.models import PageWithRelease, ModelWithRelease
 
 from wagtail.api import APIField
 
 
-@register_setting
-class SiteSettings(BaseSetting):
+class SiteSettings(ModelWithRelease):
     title = models.CharField(max_length=255)
+    slug = models.SlugField(null=True, blank=True)
+
+    site = models.ForeignKey(
+        'wagtailcore.Site',
+        on_delete=models.CASCADE,
+    )
+
+    panels = ModelWithRelease.panels + [
+        FieldPanel('title'),
+        FieldPanel('slug'),
+        FieldPanel('site'),
+    ]
+
+    def __str__(self):
+        return self.title
+
+    def save(self):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super(SiteSettings, self).save()
 
 
 class SimpleRichText(blocks.StructBlock):
@@ -45,6 +64,17 @@ class TestRelatedModel(models.Model):
         FieldPanel('name'),
     ]
 
+class DynamicTestPageBlock(blocks.PageChooserBlock):
+
+    def get_api_representation(self, value, context=None):
+        return {
+            'id': value.id,
+            'serializer': 'cover',
+            'dynamic': True,
+            'app': value.__class__._meta.app_label,
+            'class': value.__class__._meta.object_name,
+        }
+
 
 class TestPage(PageWithRelease):
     name1 = models.CharField(max_length=255)
@@ -58,6 +88,8 @@ class TestPage(PageWithRelease):
     body = StreamField([
         ('simple_richtext', SimpleRichText(icon='title')),
         ('block_list', BlockList()),
+        ('block_list', BlockList()),
+        ('dynamictestpage_block', DynamicTestPageBlock('test_page.TestPage')),
     ], null=True)
 
     content_panels = Page.content_panels + [
@@ -114,6 +146,11 @@ class TestModel(ModelWithRelease):
     name1 = models.CharField(max_length=255)
     name2 = models.CharField(max_length=255)
 
+    body = StreamField([
+        ('simple_richtext', SimpleRichText(icon='title')),
+        ('dynamictestpage_block', DynamicTestPageBlock('test_page.TestPage')),
+    ], blank=True, null=True)
+
     release_config = {
         'can_publish_to_release': True,
         'can_publish_to_live_release': True,
@@ -122,6 +159,7 @@ class TestModel(ModelWithRelease):
     panels = ModelWithRelease.panels + [
         FieldPanel('name1'),
         FieldPanel('name2'),
+        StreamFieldPanel('body'),
     ]
 
     def get_serializers(self):

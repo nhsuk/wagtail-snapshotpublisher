@@ -28,6 +28,7 @@ class TestPageCoverSerializer(serializers.ModelSerializer):
 
 
 class TestModelSerializer(serializers.ModelSerializer):
+    body = StreamField()
 
     def to_representation(self, data):
         serialized_data = super(TestModelSerializer, self).to_representation(data)
@@ -39,6 +40,7 @@ class TestModelSerializer(serializers.ModelSerializer):
         fields = (
             'name1',
             'name2',
+            'body',
             'content_release',
         )
 

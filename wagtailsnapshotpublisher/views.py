@@ -11,8 +11,51 @@ from wagtail.core.models import Page, PageRevision
 
 from djangosnapshotpublisher.publisher_api import PublisherAPI
 
-from .models import WSSPContentRelease
+from .models import WSSPContentRelease, document_load_dynamic_elements
 from .forms import PublishReleaseForm, FrozenReleasesForm
+from .utils import get_dynamic_element_keys
+
+
+def get_content_details(site_code, release_uuid, content_type, content_key):
+    publisher_api = PublisherAPI()
+    try:
+        content_release = None
+        if release_uuid:
+            # get ContentRelease
+            content_release = WSSPContentRelease.objects.get(
+                site_code=site_code,
+                uuid=release_uuid,
+            )
+        else:
+            # get live ContentRelease
+            response = publisher_api.get_live_content_release(release.site_code)
+            if response['status'] == 'error':
+                return response
+            else:
+                release_id = response['content']
+                content_release = WSSPContentRelease.objects.get(id=release_id)
+    except WSSPContentRelease.DoesNotExist:
+        pass
+    
+    response = publisher_api.get_document_from_content_release(
+        site_code,
+        release_uuid,
+        content_key,
+        content_type,
+    )
+
+    if response['status'] == 'success':
+        data = json.loads(response['content'].document_json)
+        dynamic_element_keys = get_dynamic_element_keys(data)
+        if dynamic_element_keys and len(dynamic_element_keys) > 0:
+            data.update({
+                'dynamic_element_keys': dynamic_element_keys,
+            })
+            data, updated = document_load_dynamic_elements(content_release, data)
+    else:
+        return response
+
+    return data
 
 
 def unpublish_page(request, page_id, release_id, recursively=False):
@@ -49,7 +92,7 @@ def remove(request, content_app, content_class, content_id, release_id):
     return redirect('/admin/{}/{}/'.format(content_app, content_class))
 
 
-def preview_model(request, content_app, content_class, content_id, preview_mode='default'):
+def preview_model(request, content_app, content_class, content_id, preview_mode='default', load_dynamic_element=True):
     model_class = apps.get_model(content_app, content_class)
     form_class = modelform_factory(model_class, fields=[field.name for field in model_class._meta.get_fields()])
     form = form_class(request.POST)
@@ -57,10 +100,35 @@ def preview_model(request, content_app, content_class, content_id, preview_mode=
         instance = form.save(commit=False)
         serializers = instance.get_serializers()
         serialized_page = serializers[preview_mode]['class'](instance=instance)
-        return JsonResponse(serialized_page.data)
+        data = serialized_page.data
+        if load_dynamic_element:
+            dynamic_element_keys = get_dynamic_element_keys(data)
+            if dynamic_element_keys and len(dynamic_element_keys) > 0:
+                data.update({
+                    'dynamic_element_keys': dynamic_element_keys,
+                })
+                data, updated = document_load_dynamic_elements(instance.live_releave, data)
+        return JsonResponse(data)
     else:
         print(form.errors)
         return HttpResponseServerError('Form is not valid')
+
+
+def preview_instance(request, content_app, content_class, content_id, preview_mode='default', load_dynamic_element=True):
+    model_class = apps.get_model(content_app, content_class)
+    instance = model_class.objects.get(id=content_id)
+
+    serializers = instance.get_serializers()
+    serialized_page = serializers[preview_mode]['class'](instance=instance)
+    data = serialized_page.data
+    if load_dynamic_element:
+        dynamic_element_keys = get_dynamic_element_keys(data)
+        if dynamic_element_keys and len(dynamic_element_keys) > 0:
+            data.update({
+                'dynamic_element_keys': dynamic_element_keys,
+            })
+            data, updated = document_load_dynamic_elements(instance.live_releave, data)
+    return JsonResponse(data)
 
 
 def release_detail(request, release_id, set_live_button=False, release_id_to_compare_to=None):
@@ -176,26 +244,10 @@ def release_archive(request, release_id):
 
 
 def get_document_release(
-        request, site_code, content_release_uuid=None, type='site_definition', key='site_definition'):
-
-    publisher_api = PublisherAPI()
-
-    if not content_release_uuid:
-        reponse = publisher_api.get_live_content_release(site_code)
-        if reponse['status'] != 'success':
-            return JsonResponse(reponse)
-        content_release_uuid = reponse['content'].uuid
-
-    reponse = publisher_api.get_document_from_content_release(
-        site_code,
-        content_release_uuid,
-        key,
-        type,
+        request, site_code, content_release_uuid=None, content_type='content', content_key=None):
+    return JsonResponse(
+        get_content_details(site_code, content_release_uuid, content_type, content_key)
     )
-
-    if reponse['status'] == 'success':
-        return HttpResponse(reponse['content'].document_json, content_type="application/json")
-    return JsonResponse(reponse)
 
 
 def release_restore(request, release_id):

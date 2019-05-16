@@ -2,6 +2,7 @@ import json
 import re
 
 from django import forms
+from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -20,6 +21,7 @@ from djangosnapshotpublisher.models import ContentRelease
 from djangosnapshotpublisher.publisher_api import PublisherAPI
 
 from .panels import ReadOnlyPanel
+from .utils import getFromDict, setInDict, delInDict, get_dynamic_element_keys
 
 
 site_code_widget = None
@@ -148,6 +150,7 @@ def define_version(sender, instance, *args, **kwargs):
         instance.version = next_version
         return instance
 
+
 @receiver(post_save, sender=WSSPContentRelease)
 def fix_versions_conflict(sender, instance, *args, **kwargs):
     duplicate_version = WSSPContentRelease.objects.filter(
@@ -180,6 +183,66 @@ def fix_versions_conflict(sender, instance, *args, **kwargs):
             release.save()
 
 
+@receiver(post_save, sender=ContentRelease)
+@receiver(post_save, sender=WSSPContentRelease)
+def load_dynamic_element(sender, instance, *args, **kwargs):
+    if instance.is_live:
+        # get all ReleaseContent with dynamic element
+        release_documents = instance.release_documents.filter(
+            parameters__key='have_dynamic_elements',
+            parameters__content=True,
+        )
+
+        for release_document in release_documents:
+            content, updated = document_load_dynamic_elements(
+                instance,
+                json.loads(release_document.document_json)
+            )
+            if updated:
+                release_document.document_json = json.dumps(content)
+                release_document.save()
+
+
+def document_load_dynamic_elements(content_release, content):
+    updated = False
+
+    if 'dynamic_element_keys' in content:
+        from django.apps import apps
+        elements_to_remove = []
+
+        for elt_list in content['dynamic_element_keys']:
+            item = getFromDict(content, elt_list)
+
+            try:
+                Model = apps.get_model(item['app'], item['class'])
+                loaded_instance = Model.objects.get(id=item['id'])
+                item_serializer = loaded_instance.get_serializers()[item['serializer']]
+
+                publisher_api = PublisherAPI()
+                reponse = publisher_api.get_document_from_content_release(
+                    content_release.site_code,
+                    content_release.uuid,
+                    item_serializer['key'],
+                    item_serializer['type'],
+                )
+
+                if reponse['status'] == 'success':
+                    setInDict(content, elt_list, json.loads(reponse['content'].document_json))
+                else:
+                    raise('''Content Release doesn't exist''')
+            except:
+                elements_to_remove.append(elt_list[:-1])
+                # delInDict(content, elt_list[:-1])
+
+        #save document with loaded dynamic content
+        for element_to_remove in elements_to_remove[::-1]:
+            delInDict(content, element_to_remove)
+        del(content['dynamic_element_keys'])
+        updated = True
+
+    return content, updated
+
+
 class WithRelease(models.Model):
     content_release = models.ForeignKey(
         WSSPContentRelease,
@@ -208,7 +271,7 @@ class WithRelease(models.Model):
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-    def publish_to_release(self, instance=None, content_release=None, extra_parameters=None):
+    def publish_to_release(self, instance=None, content_release=None, extra_parameters={}):
         if not instance:
             instance = self
 
@@ -218,13 +281,26 @@ class WithRelease(models.Model):
         serializers = self.get_serializers()
 
         for key, serializer_item in serializers.items():
+            have_dynamic_elements = False
             serialized_page = serializer_item['class'](instance=self)
+            data = serialized_page.data
+
+            dynamic_element_keys = get_dynamic_element_keys(data)
+            if dynamic_element_keys and len(dynamic_element_keys) > 0:
+                data.update({
+                    'dynamic_element_keys': dynamic_element_keys,
+                })
+                have_dynamic_elements = True
+            
+            extra_parameters.update({
+                'have_dynamic_elements': have_dynamic_elements,
+            })
 
             publisher_api = PublisherAPI()
             response = publisher_api.publish_document_to_content_release(
                 content_release.site_code,
                 content_release.uuid,
-                json.dumps(serialized_page.data),
+                json.dumps(data),
                 serializer_item['key'],
                 serializer_item['type'],
                 extra_parameters,
@@ -323,18 +399,27 @@ class PageWithRelease(Page, WithRelease):
     def get_name_slug(self):
         return 'page'
 
-    def serve_preview(self, request, mode_name='default'):
+    def serve_preview(self, request, mode_name='default', load_dynamic_element=False):
         serializers = self.get_serializers()
-        mode_name = mode_name if mode_name else 'default'
-        
+        mode_name = mode_name if mode_name else 'default'        
         serialized_page = serializers[mode_name]['class'](instance=self)
-        return JsonResponse(serialized_page.data)
+        data = serialized_page.data
+
+        if load_dynamic_element:
+            dynamic_element_keys = get_dynamic_element_keys(data)
+            if dynamic_element_keys and len(dynamic_element_keys) > 0:
+                data.update({
+                    'dynamic_element_keys': dynamic_element_keys,
+                })
+                data, updated = document_load_dynamic_elements(self.live_releave, data)
+        return JsonResponse(data)
 
     def save_revision(self, user=None, submitted_for_moderation=False, approved_go_live_at=None, changed=True):
         assigned_release = self.content_release
         self.content_release = None
 
         revision = super(PageWithRelease, self).save_revision(user, submitted_for_moderation, approved_go_live_at, changed)
+        revision.publish()
 
         if assigned_release:
             if submitted_for_moderation:
