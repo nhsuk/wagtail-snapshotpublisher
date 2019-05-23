@@ -1,3 +1,7 @@
+"""
+.. module:: test_page.wagtail_hooks
+"""
+
 from wagtail.contrib.modeladmin.options import modeladmin_register
 
 from wagtailsnapshotpublisher.wagtail_hooks import ModelAdminWithRelease
@@ -6,6 +10,7 @@ from .models import TestModel, SiteSettings
 
 
 class TestModelAdmin(ModelAdminWithRelease):
+    """ TestModelAdmin """
     model = TestModel
     menu_label = 'TestModel'
     edit_template_name = 'modeladmin/edit_with_release.html'
@@ -15,6 +20,7 @@ modeladmin_register(TestModelAdmin)
 
 
 class SiteSettingsAdmin(ModelAdminWithRelease):
+    """ SiteSettingsAdmin """
     model = SiteSettings
     menu_label = 'SiteSettings'
     edit_template_name = 'modeladmin/edit_with_release.html'

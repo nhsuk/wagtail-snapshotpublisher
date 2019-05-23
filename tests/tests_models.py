@@ -1,8 +1,13 @@
+"""
+.. module:: tests.tests_models
+"""
+
 import json
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.test import Client
 from django.utils import timezone
 
@@ -12,12 +17,80 @@ from wagtail.tests.utils import WagtailPageTests
 
 from djangosnapshotpublisher.models import ReleaseDocument
 from djangosnapshotpublisher.publisher_api import PublisherAPI
-from wagtailsnapshotpublisher.models import WSSPContentRelease
+
+from wagtailsnapshotpublisher.models import WithRelease, WSSPContentRelease
 
 from test_page.models import TestModel, TestPage, TestRelatedModel
 
 
+class WSSPContentReleaseTests(WagtailPageTests):
+    """ WSSPContentReleaseTests """
+
+    def setUp(self):
+        """ setUp """
+
+        # Create ContentRelease
+        self.content_release = WSSPContentRelease(
+            title='release1',
+            site_code='site1',
+            version='0.1',
+            status=0,
+        )
+        self.content_release.save()
+
+    def test_init(self):
+        """ test_str """
+        self.assertEqual(str(self.content_release), '[[site1]] 0.1 - release1__PENDING')
+        self.assertTrue(WSSPContentRelease.get_panel_field_from_panels([], None) is None)
+
+
+class WithReleaseTests(WagtailPageTests):
+    """ WSSPContentReleaseTests """
+
+    class TestModelWithRelease(WithRelease):
+        """ TestModelWithRelease """
+        class Meta:
+            """ Meta """
+            app_label = 'unittest'
+
+    def setUp(self):
+        """ setUp """
+
+        # Create ContentRelease
+        self.content_release = WSSPContentRelease(
+            title='release1',
+            site_code='site1',
+            version='0.1',
+            status=1,
+            publish_datetime=timezone.now() - timezone.timedelta(hours=1),
+        )
+        self.content_release.save()
+
+        self.testmodel_with_release = WithReleaseTests.TestModelWithRelease()
+        self.testmodel_with_release.content_release = self.content_release
+
+    def test_get_serializers(self):
+        """ test_get_serializers """
+        try:
+            self.testmodel_with_release.get_serializers()
+            self.assertFail('''A ValueError exception haven't been raise''')
+        except ValueError:
+            pass
+    
+    def test_live_releave(self):
+        """ test_live_releave """
+        self.assertEqual(self.testmodel_with_release.live_releave, self.content_release)
+
+    def test_publish_to_release(self):
+        """ test_publish_to_release """
+
+    def test_unpublish_or_delete_from_release(self):
+        """ test_unpublish_or_delete_from_release """
+
+
+
 class ModelWithReleaseTests(WagtailPageTests):
+    """ ModelWithReleaseTests """
 
     def setUp(self):
         """ setUp """
@@ -47,6 +120,8 @@ class ModelWithReleaseTests(WagtailPageTests):
         self.test_model.save()
 
     def test_create_then_publish(self):
+        """ test_create_then_publish """
+
         # Publish TestModel to a release
         c = Client()
         response = c.post(
@@ -78,6 +153,8 @@ class ModelWithReleaseTests(WagtailPageTests):
         )
 
     def test_update_then_publish(self):
+        """ test_update_then_publish """
+
         # Publish TestModel to a release
         c = Client()
         response = c.post(
@@ -133,6 +210,8 @@ class ModelWithReleaseTests(WagtailPageTests):
         )
 
     def test_update_unpublish(self):
+        """ test_update_unpublish """
+
         # Publish TestModel to a release
         c = Client()
         response = c.post(
@@ -154,20 +233,19 @@ class ModelWithReleaseTests(WagtailPageTests):
 
         serializers = self.test_model.get_serializers()
         self.assertFalse(ReleaseDocument.objects.filter(
-                document_key=serializers['default']['key'],
-                content_type=serializers['default']['type'],
-                content_releases=self.content_release,
-            ).exists()
-        )
+            document_key=serializers['default']['key'],
+            content_type=serializers['default']['type'],
+            content_releases=self.content_release,
+        ).exists())
         self.assertFalse(ReleaseDocument.objects.filter(
-                document_key=serializers['cover']['key'],
-                content_type=serializers['cover']['type'],
-                content_releases=self.content_release,
-            ).exists()
-        )
-    
+            document_key=serializers['cover']['key'],
+            content_type=serializers['cover']['type'],
+            content_releases=self.content_release,
+        ).exists())
+
     def test_define_version(self):
-        
+        """ test_define_version """
+
         # Create ContentRelease Major Version
         content_release1 = WSSPContentRelease(
             title='release1',
@@ -237,6 +315,7 @@ class ModelWithReleaseTests(WagtailPageTests):
 
 
 class PageWithReleaseTests(WagtailPageTests):
+    """ PageWithReleaseTests """
 
     def setUp(self):
         """ setUp """
@@ -314,6 +393,8 @@ class PageWithReleaseTests(WagtailPageTests):
 
 
     def test_create_then_publish(self):
+        """ test_create_then_publish """
+
         # Publish TestPage to a release
         self.test_page.save_revision(self.user)
 
@@ -325,11 +406,14 @@ class PageWithReleaseTests(WagtailPageTests):
         )
 
         try:
-            validate(instance=json.loads(release_document.document_json), schema=self.test_page_schema)
+            validate(instance=json.loads(release_document.document_json),
+                     schema=self.test_page_schema)
         except JsonSchemaValidationError:
             self.fail('Json schema validation failed')
 
     def test_update_then_publish(self):
+        """ test_update_then_publish """
+
         # Publish TestPage to a release
         self.test_page.save_revision(self.user)
 
@@ -338,7 +422,7 @@ class PageWithReleaseTests(WagtailPageTests):
         self.test_page.title = 'Title2'
         self.test_page.name1 = 'Test Name3'
         self.test_page.name2 = 'Test Name4'
-        self.test_page.body=json.dumps([
+        self.test_page.body = json.dumps([
             {
                 'type': 'simple_richtext', 'value': {
                     'title': 'Simple Rich Text Title3',
@@ -360,7 +444,7 @@ class PageWithReleaseTests(WagtailPageTests):
             },
         ])
         self.test_page.save()
-        
+
 
         # Update TestRelatedModel
         self.test_related_model.name = 'Test Related Name2'
@@ -386,6 +470,8 @@ class PageWithReleaseTests(WagtailPageTests):
         self.assertEqual(document['name1'], 'Test Name3')
 
     def test_update_unpublish(self):
+        """ test_update_unpublish """
+
         # Publish TestPage to a release
         self.test_page.save_revision(self.user)
 
@@ -403,20 +489,20 @@ class PageWithReleaseTests(WagtailPageTests):
 
         serializers = self.test_page.get_serializers()
         self.assertFalse(ReleaseDocument.objects.filter(
-                document_key=serializers['default']['key'],
-                content_type=serializers['default']['type'],
-                content_releases=self.content_release,
-            ).exists()
-        )
+            document_key=serializers['default']['key'],
+            content_type=serializers['default']['type'],
+            content_releases=self.content_release,
+        ).exists())
         self.assertFalse(ReleaseDocument.objects.filter(
-                document_key=serializers['cover']['key'],
-                content_type=serializers['cover']['type'],
-                content_releases=self.content_release,
-            ).exists()
-        )
+            document_key=serializers['cover']['key'],
+            content_type=serializers['cover']['type'],
+            content_releases=self.content_release,
+        ).exists())
 
 
     def test_unpublish_recursively(self):
+        """ test_unpublish_recursively """
+
         # -homepage
         #  |-test_page
         #    |-test_page2
@@ -454,6 +540,8 @@ class PageWithReleaseTests(WagtailPageTests):
         )
 
     def test_update_remove(self):
+        """ test_update_remove """
+
         # Publish TestPage to a release
         self.test_page.save_revision(self.user)
 
@@ -470,23 +558,21 @@ class PageWithReleaseTests(WagtailPageTests):
 
         serializers = self.test_page.get_serializers()
         self.assertEqual(ReleaseDocument.objects.filter(
-                document_key=serializers['default']['key'],
-                content_type=serializers['default']['type'],
-                content_releases=self.content_release,
-                deleted=True
-            ).count(),
-            1,
-        )
+            document_key=serializers['default']['key'],
+            content_type=serializers['default']['type'],
+            content_releases=self.content_release,
+            deleted=True
+        ).count(), 1)
         self.assertEqual(ReleaseDocument.objects.filter(
-                document_key=serializers['default']['key'],
-                content_type=serializers['default']['type'],
-                content_releases=self.content_release,
-                deleted=True
-            ).count(),
-            1,
-        )
+            document_key=serializers['default']['key'],
+            content_type=serializers['default']['type'],
+            content_releases=self.content_release,
+            deleted=True
+        ).count(), 1)
 
     def test_remove_recursively(self):
+        """ test_remove_recursively """
+
         # -homepage
         #  |-test_page
         #    |-test_page2
@@ -514,22 +600,20 @@ class PageWithReleaseTests(WagtailPageTests):
         )
 
         self.assertEqual(ReleaseDocument.objects.filter(
-                content_releases=self.content_release,
-                deleted=True,
-                content_type='page',
-            ).count(),
-            3,
-        )
+            content_releases=self.content_release,
+            deleted=True,
+            content_type='page',
+        ).count(), 3)
 
         self.assertEqual(ReleaseDocument.objects.filter(
-                content_releases=self.content_release,
-                deleted=True,
-                content_type='cover',
-            ).count(),
-            3,
-        )
+            content_releases=self.content_release,
+            deleted=True,
+            content_type='cover',
+        ).count(), 3)
 
     def test_restore_release(self):
+        """ test_restore_release """
+
         self.test_page.content_release = self.content_release
         revision_test_page1_r1 = self.test_page.save_revision(self.user)
 
@@ -538,7 +622,8 @@ class PageWithReleaseTests(WagtailPageTests):
         revision_test_page2_r1 = test_page2.save_revision(self.user)
 
         publisher_api = PublisherAPI()
-        publisher_api.set_live_content_release(self.content_release.site_code, self.content_release.uuid)
+        response = publisher_api.set_live_content_release(self.content_release.site_code,
+                                                          self.content_release.uuid)
 
         # Create content_release2
         content_release2 = WSSPContentRelease(
@@ -549,7 +634,8 @@ class PageWithReleaseTests(WagtailPageTests):
         )
         content_release2.save()
 
-        test_page3 = self.test_page.copy(False, self.test_page, {'slug': 'test_page3', 'title': 'Title3'})
+        test_page3 = self.test_page.copy(False, self.test_page,
+                                         {'slug': 'test_page3', 'title': 'Title3'})
         test_page3.content_release = content_release2
         revision_test_page3_r2 = test_page3.save_revision(self.user)
 
@@ -557,75 +643,77 @@ class PageWithReleaseTests(WagtailPageTests):
         revision_test_page2_r2 = test_page2.save_revision(self.user)
 
         publisher_api = PublisherAPI()
-        publisher_api.set_live_content_release(content_release2.site_code, content_release2.uuid)
+        response = publisher_api.set_live_content_release(content_release2.site_code,
+                                                          content_release2.uuid)
 
-        response = publisher_api.compare_content_releases(content_release2.site_code, content_release2.uuid, self.content_release.uuid)
+        response = publisher_api.compare_content_releases(content_release2.site_code,
+                                                          content_release2.uuid,
+                                                          self.content_release.uuid)
         comparison = response['content']
 
         self.assertEqual(comparison, [
-                {
-                    'document_key': str(test_page3.id),
-                    'content_type': 'cover',
-                    'diff': 'Added',
-                    'parameters': {
+            {
+                'document_key': str(test_page3.id),
+                'content_type': 'cover',
+                'diff': 'Added',
+                'parameters': {
+                    'have_dynamic_elements': 'False',
+                    'revision_id': str(revision_test_page3_r2.id),
+                }
+            }, {
+                'document_key': str(test_page3.id),
+                'content_type': 'page',
+                'diff': 'Added',
+                'parameters': {
+                    'have_dynamic_elements': 'False',
+                    'revision_id': str(revision_test_page3_r2.id),
+                }
+            }, {
+                'document_key': str(test_page2.id),
+                'content_type': 'cover',
+                'diff': 'Changed',
+                'parameters': {
+                    'release_from': {
                         'have_dynamic_elements': 'False',
-                        'revision_id': str(revision_test_page3_r2.id),
-                    }
-                }, {
-                    'document_key': str(test_page3.id),
-                    'content_type': 'page',
-                    'diff': 'Added',
-                    'parameters': {
+                        'revision_id': str(revision_test_page2_r2.id),
+                    },
+                    'release_compare_to': {
                         'have_dynamic_elements': 'False',
-                        'revision_id': str(revision_test_page3_r2.id),
-                    }
-                }, {
-                    'document_key': str(test_page2.id),
-                    'content_type': 'cover',
-                    'diff': 'Changed',
-                    'parameters': {
-                        'release_from': {
-                            'have_dynamic_elements': 'False',
-                            'revision_id': str(revision_test_page2_r2.id),
-                        },
-                        'release_compare_to': {
-                            'have_dynamic_elements': 'False',
-                            'revision_id': str(revision_test_page2_r1.id),
-                        }
-                    }
-                }, {
-                    'document_key': str(test_page2.id),
-                    'content_type': 'page',
-                    'diff': 'Changed',
-                    'parameters': {
-                        'release_from': {
-                            'have_dynamic_elements': 'False',
-                            'revision_id': str(revision_test_page2_r2.id),
-                        },
-                        'release_compare_to': {
-                            'have_dynamic_elements': 'False',
-                            'revision_id': str(revision_test_page2_r1.id),
-                        }
-                    }
-                }, {
-                    'document_key': str(self.test_page.id),
-                    'content_type': 'cover',
-                    'diff': 'Removed',
-                    'parameters': {
-                        'have_dynamic_elements': 'False',
-                        'revision_id': str(revision_test_page1_r1.id),
-                    }
-                }, {
-                    'document_key': str(self.test_page.id),
-                    'content_type': 'page',
-                    'diff': 'Removed',
-                    'parameters': {
-                        'have_dynamic_elements': 'False',
-                        'revision_id': str(revision_test_page1_r1.id),
+                        'revision_id': str(revision_test_page2_r1.id),
                     }
                 }
-            ]
-        )
+            }, {
+                'document_key': str(test_page2.id),
+                'content_type': 'page',
+                'diff': 'Changed',
+                'parameters': {
+                    'release_from': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page2_r2.id),
+                    },
+                    'release_compare_to': {
+                        'have_dynamic_elements': 'False',
+                        'revision_id': str(revision_test_page2_r1.id),
+                    }
+                }
+            }, {
+                'document_key': str(self.test_page.id),
+                'content_type': 'cover',
+                'diff': 'Removed',
+                'parameters': {
+                    'have_dynamic_elements': 'False',
+                    'revision_id': str(revision_test_page1_r1.id),
+                }
+            }, {
+                'document_key': str(self.test_page.id),
+                'content_type': 'page',
+                'diff': 'Removed',
+                'parameters': {
+                    'have_dynamic_elements': 'False',
+                    'revision_id': str(revision_test_page1_r1.id),
+                }
+            }
+        ])
 
         # Restore content_release
         c = Client()
@@ -640,7 +728,9 @@ class PageWithReleaseTests(WagtailPageTests):
             restored=True,
         )
 
-        response = publisher_api.compare_content_releases(restored_release.site_code, restored_release.uuid, content_release2.uuid)
+        response = publisher_api.compare_content_releases(restored_release.site_code,
+                                                          restored_release.uuid,
+                                                          content_release2.uuid)
         comparison = response['content']
 
         self.assertEqual(comparison, [
@@ -705,5 +795,4 @@ class PageWithReleaseTests(WagtailPageTests):
                     'revision_id': str(revision_test_page3_r2.id),
                 }
             }
-        ]
-    )
+        ])

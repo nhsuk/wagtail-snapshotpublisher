@@ -1,12 +1,14 @@
+"""
+.. module:: wagtailsnapshotpublisher.wagatil_hooks
+"""
+
 from django.contrib.auth.models import Permission
 from django.templatetags.static import static
-from django.urls import resolve, reverse
+from django.urls import reverse
 from django.utils.html import format_html, format_html_join
 from django.utils.translation import ugettext_lazy as _
 
 from wagtail.admin.action_menu import ActionMenuItem
-from wagtail.admin.edit_handlers import FieldPanel
-from wagtail.contrib.forms.models import AbstractForm
 from wagtail.contrib.modeladmin.helpers import ButtonHelper
 from wagtail.contrib.modeladmin.options import ModelAdmin, modeladmin_register
 from wagtail.core import hooks
@@ -15,16 +17,19 @@ from .models import WSSPContentRelease
 
 
 class ReleaseButtonHelper(ButtonHelper):
+    """ ReleaseButtonHelper """
 
     def get_buttons_for_obj(self, obj, exclude=None, classnames_add=None,
                             classnames_exclude=None):
-        btns = ButtonHelper.get_buttons_for_obj(self, obj, exclude=None, classnames_add=None, classnames_exclude=None)
-        
+        """ get_buttons_for_obj """
+        btns = ButtonHelper.get_buttons_for_obj(self, obj, exclude=None, classnames_add=None,
+                                                classnames_exclude=None)
+
         if obj == obj.__class__.objects.live(site_code=obj.site_code):
             pass
         elif not obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
             btns.insert(1, self.detail_revision_button(obj, ['button'], classnames_exclude))
-            if obj.status >= 1 and obj.publish_datetime != None:
+            if obj.status >= 1 and obj.publish_datetime is not None:
                 btns.insert(2, self.unfreeze_button(obj, ['button'], classnames_exclude))
             else:
                 btns.insert(2, self.set_live_revision_button(obj, ['button'], classnames_exclude))
@@ -34,46 +39,63 @@ class ReleaseButtonHelper(ButtonHelper):
         return btns
 
     def create_button(self, label, title, url, classnames_add=None, classnames_exclude=None):
+        """ create_button """
         if classnames_add is None:
             classnames_add = []
         if classnames_exclude is None:
             classnames_exclude = []
         classnames = self.edit_button_classnames + classnames_add
-        cn = self.finalise_classname(classnames, classnames_exclude)
+        classname = self.finalise_classname(classnames, classnames_exclude)
 
         return {
             'url': url,
             'label': _(label),
-            'classname': cn,
+            'classname': classname,
             'title': _(title),
         }
 
     def detail_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
-        url = reverse('wagtailsnapshotpublisher_custom_admin:release-detail', kwargs={'release_id': obj.pk})
-        return self.create_button('detail', 'Detail updated pages for this release', url, classnames_add, classnames_exclude)
-    
+        """ detail_revision_button """
+        url = reverse('wagtailsnapshotpublisher_custom_admin:release-detail',
+                      kwargs={'release_id': obj.pk})
+        return self.create_button('detail', 'Detail updated pages for this release', url,
+                                  classnames_add, classnames_exclude)
+
     def set_live_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
-        url = reverse('wagtailsnapshotpublisher_custom_admin:release-set-live-detail', kwargs={'release_id': obj.pk})
-        return self.create_button('set live', 'Set this release live', url, classnames_add, classnames_exclude)
-    
+        """ set_live_revision_button """
+        url = reverse(
+            'wagtailsnapshotpublisher_custom_admin:release-set-live-detail',
+            kwargs={'release_id': obj.pk},
+        )
+        return self.create_button('set live', 'Set this release live', url, classnames_add,
+                                  classnames_exclude)
+
     def archive_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
-        url = reverse('wagtailsnapshotpublisher_custom_admin:release-archive', kwargs={'release_id': obj.pk})
-        return self.create_button('archive', 'Archive this release', url, classnames_add, classnames_exclude)
+        """ archive_revision_button """
+        url = reverse('wagtailsnapshotpublisher_custom_admin:release-archive',
+                      kwargs={'release_id': obj.pk})
+        return self.create_button('archive', 'Archive this release', url, classnames_add,
+                                  classnames_exclude)
 
     def restore_button(self, obj, classnames_add=None, classnames_exclude=None):
-        url = reverse('wagtailsnapshotpublisher_custom_admin:release-restore', kwargs={'release_id': obj.pk})
+        """ restore_button """
+        url = reverse('wagtailsnapshotpublisher_custom_admin:release-restore',
+                      kwargs={'release_id': obj.pk})
         return self.create_button('restore', 'Restore', url, classnames_add, classnames_exclude)
 
     def unfreeze_button(self, obj, classnames_add=None, classnames_exclude=None):
-        url = reverse('wagtailsnapshotpublisher_custom_admin:release-unfreeze', kwargs={'release_id': obj.pk})
+        """ unfreeze_button """
+        url = reverse('wagtailsnapshotpublisher_custom_admin:release-unfreeze',
+                      kwargs={'release_id': obj.pk})
         return self.create_button('unfreeze', 'Unfreeze', url, classnames_add, classnames_exclude)
 
 
 class ReleaseAdmin(ModelAdmin):
+    """ ReleaseAdmin """
     model = WSSPContentRelease
     menu_label = 'Releases'
     menu_icon = 'date'
-    menu_order = 900 
+    menu_order = 900
 
     list_display = ('site_code', 'title', 'uuid', 'status', 'publish_datetime', 'version')
     list_filter = ('status', 'site_code',)
@@ -82,6 +104,7 @@ class ReleaseAdmin(ModelAdmin):
     index_view_extra_css = ('wagtailadmin/css/list-release.css',)
 
     def get_extra_attrs_for_row(self, obj, context):
+        """ get_extra_attrs_for_row """
         classname = ''
         if obj == obj.__class__.objects.live(site_code=obj.site_code):
             classname = 'is-live'
@@ -93,7 +116,7 @@ class ReleaseAdmin(ModelAdmin):
         return {
             'class': classname,
         }
-    
+
     def get_button_helper_class(self):
         """
         Returns a ButtonHelper class to help generate buttons for the given
@@ -102,9 +125,11 @@ class ReleaseAdmin(ModelAdmin):
         return ReleaseButtonHelper
 
     def get_queryset(self, request):
+        """ get_queryset """
         return super(ReleaseAdmin, self).get_queryset(request).exclude(status=2)
-    
+
     def get_edit_handler(self, instance, request):
+        """ get_edit_handler """
         from wagtail.admin.edit_handlers import ObjectList
         panels = self.model.panels
         if instance.status >= 1 and instance.publish_datetime:
@@ -116,8 +141,11 @@ class ReleaseAdmin(ModelAdmin):
 modeladmin_register(ReleaseAdmin)
 
 
-class ReleaseActionMenuItem (ActionMenuItem):
+class ReleaseActionMenuItem(ActionMenuItem):
+    """ ReleaseActionMenuItem """
+
     def is_shown(self, request, context):
+        """ is_shown """
         if context['view'] == 'edit' and 'page' in context and \
                 hasattr(context['page'], 'content_release'):
             return (
@@ -128,62 +156,80 @@ class ReleaseActionMenuItem (ActionMenuItem):
 
 
 class PublishToReleaseMenuItem(ReleaseActionMenuItem):
+    """ PublishToReleaseMenuItem """
     label = _('Publish To A Release')
     name = 'wssp-actionrelease-publish-release'
 
 
 class UnpublishToReleaseMenuItem(ReleaseActionMenuItem):
+    """ UnpublishToReleaseMenuItem """
     label = _('Unpublish From A Release')
     name = 'wssp-actionrelease-unpublish-release'
 
 
 class RemoveFromReleaseMenuItem(ReleaseActionMenuItem):
+    """ RemoveFromReleaseMenuItem """
     label = _('Remove From A Release')
     name = 'wssp-actionrelease-remove-release'
 
 
 class PublishToLiveReleaseMenuItem(ReleaseActionMenuItem):
+    """ PublishToLiveReleaseMenuItem """
     label = _('Publish Directly To Live')
     name = 'wssp-actionliverelease-publish-live-release'
 
 
 @hooks.register('register_page_action_menu_item')
 def register_publish_to_release_menu_item():
+    """ register_publish_to_release_menu_item """
     return PublishToReleaseMenuItem(order=30)
 
 @hooks.register('register_page_action_menu_item')
 def register_unpublish_to_release_menu_item():
+    """ register_unpublish_to_release_menu_item """
     return UnpublishToReleaseMenuItem(order=20)
 
 @hooks.register('register_page_action_menu_item')
 def register_remove_from_release_menu_item():
+    """ register_remove_from_release_menu_item """
     return RemoveFromReleaseMenuItem(order=10)
 
 @hooks.register('register_page_action_menu_item')
 def register_publish_to_live_release_menu_item():
+    """ register_publish_to_live_release_menu_item """
     return PublishToLiveReleaseMenuItem(order=40)
 
 @hooks.register('construct_page_action_menu')
 def remove_submit_to_moderator_option(menu_items, request, context):
+    """ remove_submit_to_moderator_option """
     if context['view'] == 'create':
-        menu_items[:] = [item for item in menu_items if item.name and item.name.startswith('wssp-action')]
+        menu_items[:] = [item for item in menu_items if item.name and \
+            item.name.startswith('wssp-action')]
 
-    if context['view'] == 'edit' and 'page' in context and hasattr(context['page'], 'content_release'):
+    if context['view'] == 'edit' and 'page' in context and \
+            hasattr(context['page'], 'content_release'):
         if hasattr(context['page'].__class__, 'release_config'):
             items = []
-            if 'can_publish_to_release' in context['page'].__class__.release_config and context['page'].__class__.release_config['can_publish_to_release']:
-                items += [item for item in menu_items if item.name and item.name.startswith('wssp-actionrelease-')]
-            if 'can_publish_to_live_release' in context['page'].__class__.release_config and context['page'].__class__.release_config['can_publish_to_live_release']:
-                items += [item for item in menu_items if item.name and item.name.startswith('wssp-actionliverelease-')]
+            if 'can_publish_to_release' in context['page'].__class__.release_config and \
+                    context['page'].__class__.release_config['can_publish_to_release']:
+                items += [item for item in menu_items if item.name and \
+                    item.name.startswith('wssp-actionrelease-')]
+            if 'can_publish_to_live_release' in context['page'].__class__.release_config and \
+                    context['page'].__class__.release_config['can_publish_to_live_release']:
+                items += [item for item in menu_items if item.name and \
+                    item.name.startswith('wssp-actionliverelease-')]
             menu_items[:] = items
 
 
 @hooks.register('insert_editor_js')
 def add_release_js():
+    """ add_release_js """
     js_files = [
         'wagtailadmin/js/edit-action-release.js',
     ]
-    js_includes = format_html_join('\n', '<script src="{0}"></script>',
+    js_includes = format_html_join(
+        '\n',
+        '<script src="{0}"></script>',
         ((static(filename),) for filename in js_files)
     )
     return js_includes
@@ -191,6 +237,7 @@ def add_release_js():
 
 @hooks.register('insert_editor_css')
 def add_release_css():
+    """ add_release_css """
     return format_html(
         '<link rel="stylesheet" href="{}">',
         static('wagtailadmin/css/edit-action-release.css')
@@ -198,6 +245,7 @@ def add_release_css():
 
 @hooks.register('insert_global_admin_css')
 def global_admin_css():
+    """ global_admin_css """
     return format_html(
         '<link rel="stylesheet" href="{}">',
         static('wagtailadmin/css/custom_release.css')
@@ -205,8 +253,10 @@ def global_admin_css():
 
 @hooks.register('register_permissions')
 def register_permissions():
+    """ register_permissions """
     return Permission.objects.filter(content_type__app_label='wagtailadmin', codename='access_dev')
 
 
 class ModelAdminWithRelease(ModelAdmin):
+    """ ModelAdminWithRelease """
     edit_template_name = 'modeladmin/edit_with_release.html'

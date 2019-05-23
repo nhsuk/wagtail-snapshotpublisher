@@ -1,9 +1,12 @@
+"""
+.. module:: wagtailsnapshotpublisher.views
+"""
+
 import json
 
 from django.apps import apps
-from django.forms.models import model_to_dict
 from django.forms.models import modelform_factory
-from django.http import HttpResponse, JsonResponse, HttpResponseServerError, Http404
+from django.http import JsonResponse, HttpResponseServerError, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import ugettext_lazy as _
 
@@ -17,6 +20,7 @@ from .utils import get_dynamic_element_keys
 
 
 def get_content_details(site_code, release_uuid, content_type, content_key):
+    """ get_content_details """
     publisher_api = PublisherAPI()
     try:
         content_release = None
@@ -28,7 +32,7 @@ def get_content_details(site_code, release_uuid, content_type, content_key):
             )
         else:
             # get live ContentRelease
-            response = publisher_api.get_live_content_release(release.site_code)
+            response = publisher_api.get_live_content_release(site_code)
             if response['status'] == 'error':
                 return response
             else:
@@ -36,7 +40,7 @@ def get_content_details(site_code, release_uuid, content_type, content_key):
                 content_release = WSSPContentRelease.objects.get(id=release_id)
     except WSSPContentRelease.DoesNotExist:
         pass
-    
+
     response = publisher_api.get_document_from_content_release(
         site_code,
         release_uuid,
@@ -47,7 +51,7 @@ def get_content_details(site_code, release_uuid, content_type, content_key):
     if response['status'] == 'success':
         data = json.loads(response['content'].document_json)
         dynamic_element_keys = get_dynamic_element_keys(data)
-        if dynamic_element_keys and len(dynamic_element_keys) > 0:
+        if dynamic_element_keys:
             data.update({
                 'dynamic_element_keys': dynamic_element_keys,
             })
@@ -59,16 +63,19 @@ def get_content_details(site_code, release_uuid, content_type, content_key):
 
 
 def unpublish_page(request, page_id, release_id, recursively=False):
+    """ unpublish_page """
     page = get_object_or_404(Page, id=page_id).specific
     page.unpublish_or_delete_from_release(release_id, recursively)
     return redirect('wagtailadmin_explore', page.get_parent().id)
 
 
 def unpublish_recursively_page(request, page_id, release_id):
+    """ unpublish_recursively_page """
     return unpublish_page(request, page_id, release_id, True)
 
 
 def unpublish(request, content_app, content_class, content_id, release_id):
+    """ unpublish """
     model_class = apps.get_model(content_app, content_class)
     instance = get_object_or_404(model_class, id=content_id)
     instance.unpublish_or_delete_from_release(release_id)
@@ -76,25 +83,31 @@ def unpublish(request, content_app, content_class, content_id, release_id):
 
 
 def remove_page(request, page_id, release_id, recursively=False):
+    """ remove_page """
     page = get_object_or_404(Page, id=page_id).specific
     page.unpublish_or_delete_from_release(release_id, recursively, True)
     return redirect('wagtailadmin_explore', page.get_parent().id)
 
 
 def remove_recursively_page(request, page_id, release_id):
+    """ remove_recursively_page """
     return remove_page(request, page_id, release_id, True)
 
 
 def remove(request, content_app, content_class, content_id, release_id):
+    """ remove """
     model_class = apps.get_model(content_app, content_class)
     instance = get_object_or_404(model_class, id=content_id)
     instance.unpublish_or_delete_from_release(release_id, False, True)
     return redirect('/admin/{}/{}/'.format(content_app, content_class))
 
 
-def preview_model(request, content_app, content_class, content_id, preview_mode='default', load_dynamic_element=True):
+def preview_model(request, content_app, content_class, content_id, preview_mode='default',
+                  load_dynamic_element=True):
+    """ preview_model """
     model_class = apps.get_model(content_app, content_class)
-    form_class = modelform_factory(model_class, fields=[field.name for field in model_class._meta.get_fields()])
+    form_class = modelform_factory(
+        model_class, fields=[field.name for field in model_class._meta.get_fields()])
     form = form_class(request.POST)
     if form.is_valid():
         instance = form.save(commit=False)
@@ -103,7 +116,7 @@ def preview_model(request, content_app, content_class, content_id, preview_mode=
         data = serialized_page.data
         if load_dynamic_element:
             dynamic_element_keys = get_dynamic_element_keys(data)
-            if dynamic_element_keys and len(dynamic_element_keys) > 0:
+            if dynamic_element_keys:
                 data.update({
                     'dynamic_element_keys': dynamic_element_keys,
                 })
@@ -114,7 +127,9 @@ def preview_model(request, content_app, content_class, content_id, preview_mode=
         return HttpResponseServerError('Form is not valid')
 
 
-def preview_instance(request, content_app, content_class, content_id, preview_mode='default', load_dynamic_element=True):
+def preview_instance(request, content_app, content_class, content_id, preview_mode='default',
+                     load_dynamic_element=True):
+    """ preview_instance """
     model_class = apps.get_model(content_app, content_class)
     instance = model_class.objects.get(id=content_id)
 
@@ -123,7 +138,7 @@ def preview_instance(request, content_app, content_class, content_id, preview_mo
     data = serialized_page.data
     if load_dynamic_element:
         dynamic_element_keys = get_dynamic_element_keys(data)
-        if dynamic_element_keys and len(dynamic_element_keys) > 0:
+        if dynamic_element_keys:
             data.update({
                 'dynamic_element_keys': dynamic_element_keys,
             })
@@ -132,6 +147,7 @@ def preview_instance(request, content_app, content_class, content_id, preview_mo
 
 
 def release_detail(request, release_id, set_live_button=False, release_id_to_compare_to=None):
+    """ release_detail """
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
 
@@ -148,7 +164,7 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
     if request.method == 'POST' and release_id_to_compare_to is None:
         publish_release_form = PublishReleaseForm(request.POST)
         if publish_release_form.is_valid():
-            publish_type = publish_release_form.cleaned_data['publish_type']
+            # publish_type = publish_release_form.cleaned_data['publish_type']
             publish_datetime = publish_release_form.cleaned_data['publish_datetime']
 
             if publish_datetime:
@@ -157,7 +173,8 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
             return release_set_live(request, release_id, publish_datetime)
 
 
-    if frozen_releases_form.fields['releases'].queryset is None or not frozen_releases_form.fields['releases'].queryset.exists():
+    if frozen_releases_form.fields['releases'].queryset is None or \
+            not frozen_releases_form.fields['releases'].queryset.exists():
         frozen_releases_form = None
 
     # get current live release
@@ -176,7 +193,8 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
         compare_with_live = False
         release_to_compare_to = WSSPContentRelease.objects.get(pk=release_id_to_compare_to)
 
-    response = publisher_api.compare_content_releases(release.site_code, release.uuid, release_to_compare_to.uuid)
+    response = publisher_api.compare_content_releases(release.site_code, release.uuid,
+                                                      release_to_compare_to.uuid)
     comparison = response['content']
 
     added_pages = []
@@ -196,9 +214,11 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
                 item['page_revision'] = page_revision
                 removed_pages.append(item)
             if item['diff'] == 'Changed' and 'revision_id' in item['parameters']['release_from']:
-                page_revision = PageRevision.objects.get(id=item['parameters']['release_from']['revision_id'])
+                page_revision = PageRevision.objects.get(
+                    id=item['parameters']['release_from']['revision_id'])
                 item['page_revision_from'] = page_revision
-                item['page_revision_compare_to'] = PageRevision.objects.get(id=item['parameters']['release_compare_to']['revision_id'])
+                item['page_revision_compare_to'] = PageRevision.objects.get(
+                    id=item['parameters']['release_compare_to']['revision_id'])
                 item['title'] = json.loads(page_revision.content_json)['title']
                 changed_pages.append(item)
         else:
@@ -209,7 +229,8 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
         'added_pages': added_pages,
         'changed_pages': changed_pages,
         'removed_pages': removed_pages,
-        'extra_contents': json.dumps(extra_contents, indent=4) if extra_contents and request.user.has_perm('wagtailadmin.access_dev') else None,
+        'extra_contents': json.dumps(extra_contents, indent=4) if extra_contents and \
+            request.user.has_perm('wagtailadmin.access_dev') else None,
         'set_live_button': set_live_button,
         'release': release,
         'release_to_compare_to': release_to_compare_to,
@@ -220,16 +241,25 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
 
 
 def release_set_live_detail(request, release_id):
+    """ release_set_live_detail """
     return release_detail(request, release_id, set_live_button=True)
 
 
 def release_set_live(request, release_id, publish_date=None):
+    """ release_set_live """
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
+    response = None
+
     if publish_date:
-        publisher_api.freeze_content_release(release.site_code, release.uuid, publish_date)
+        response = publisher_api.freeze_content_release(release.site_code, release.uuid,
+                                                        publish_date)
     else:
-        publisher_api.set_live_content_release(release.site_code, release.uuid)
+        response = publisher_api.set_live_content_release(release.site_code, release.uuid)
+
+    if response['status'] != 'success':
+        raise Exception(response['error_msg'])
+
     WSSPContentRelease.objects.live(
         site_code=release.site_code,
     )
@@ -237,20 +267,25 @@ def release_set_live(request, release_id, publish_date=None):
 
 
 def release_archive(request, release_id):
+    """ release_archive """
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
-    publisher_api.archive_content_release(release.site_code, release.uuid)
+    response = publisher_api.archive_content_release(release.site_code, release.uuid)
+    if response['status'] != 'success':
+        return JsonResponse(response)
     return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 
-def get_document_release(
-        request, site_code, content_release_uuid=None, content_type='content', content_key=None):
+def get_document_release(request, site_code, content_release_uuid=None, content_type='content',
+                         content_key=None):
+    """ get_document_release """
     return JsonResponse(
         get_content_details(site_code, content_release_uuid, content_type, content_key)
     )
 
 
 def release_restore(request, release_id):
+    """ release_restore """
     try:
         release_to_restore = WSSPContentRelease.objects.get(id=release_id)
         site_code = release_to_restore.site_code
@@ -265,7 +300,7 @@ def release_restore(request, release_id):
         )
     except WSSPContentRelease.DoesNotExist:
         raise Http404(_('This release cannot be restore'))
-    
+
     title = release_to_restore.title
     if not release_to_restore.restored:
         title = '{} - Restored'.format(release_to_restore.title)
@@ -283,6 +318,7 @@ def release_restore(request, release_id):
 
 
 def release_unfreeze(request, release_id):
+    """ release_unfreeze """
     try:
         release_to_restore = WSSPContentRelease.objects.get(id=release_id)
         release_to_restore.status = 0
@@ -290,5 +326,5 @@ def release_unfreeze(request, release_id):
         release_to_restore.save()
     except WSSPContentRelease.DoesNotExist:
         raise Http404(_('This release cannot be restore'))
-    
+
     return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))

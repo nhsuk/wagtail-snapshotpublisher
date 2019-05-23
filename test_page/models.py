@@ -1,3 +1,7 @@
+"""
+.. module:: test_page.models
+"""
+
 from modelcluster.fields import ParentalKey
 
 from django.db import models
@@ -8,7 +12,6 @@ from django.forms.models import model_to_dict
 from django.template.defaultfilters import slugify
 
 from wagtail.admin.edit_handlers import FieldPanel, StreamFieldPanel, InlinePanel
-from wagtail.api import APIField
 from wagtail.contrib.redirects.models import Redirect
 from wagtail.contrib.settings.models import BaseSetting, register_setting
 from wagtail.core import blocks
@@ -17,10 +20,10 @@ from wagtail.core.models import Page
 
 from wagtailsnapshotpublisher.models import PageWithRelease, ModelWithRelease
 
-from wagtail.api import APIField
 
 
 class SiteSettings(ModelWithRelease):
+    """ SiteSettings """
     title = models.CharField(max_length=255)
     slug = models.SlugField(null=True, blank=True)
 
@@ -36,20 +39,24 @@ class SiteSettings(ModelWithRelease):
     ]
 
     def __str__(self):
+        """ __str__ """
         return self.title
 
     def save(self):
+        """ save """
         if not self.slug:
             self.slug = slugify(self.title)
         super(SiteSettings, self).save()
 
 
 class SimpleRichText(blocks.StructBlock):
+    """ SimpleRichText """
     title = blocks.CharBlock(required=True)
     body = blocks.RichTextBlock(required=False)
 
 
 class BlockList(blocks.StructBlock):
+    """ BlockList """
     title = blocks.CharBlock(required=True)
     body = blocks.StreamBlock([
         ('simple_richtext', SimpleRichText(icon='title')),
@@ -57,6 +64,7 @@ class BlockList(blocks.StructBlock):
 
 
 class TestRelatedModel(models.Model):
+    """ TestRelatedModel """
     test_page = ParentalKey('TestPage', on_delete=models.CASCADE, related_name='test_related_model')
     name = models.CharField(max_length=255)
 
@@ -65,8 +73,10 @@ class TestRelatedModel(models.Model):
     ]
 
 class DynamicTestPageBlock(blocks.PageChooserBlock):
+    """ DynamicTestPageBlock """
 
     def get_api_representation(self, value, context=None):
+        """ get_api_representation """
         return {
             'id': value.id,
             'serializer': 'cover',
@@ -77,6 +87,7 @@ class DynamicTestPageBlock(blocks.PageChooserBlock):
 
 
 class TestPage(PageWithRelease):
+    """ TestPage """
     name1 = models.CharField(max_length=255)
     name2 = models.CharField(max_length=255)
 
@@ -102,9 +113,11 @@ class TestPage(PageWithRelease):
 
     @property
     def site_code(self):
+        """ site_code """
         return SiteSettings.objects.get(site=self.get_site()).title
 
     def get_serializers(self):
+        """ get_serializers """
         from .serializers import TestPageSerializer, TestPageCoverSerializer
         return {
             'default': {
@@ -135,6 +148,7 @@ class TestPage(PageWithRelease):
 
     @property
     def default_preview_mode(self):
+        """ default_preview_mode """
         return self.preview_modes[0][0]
 
 
@@ -143,6 +157,7 @@ class TestPage(PageWithRelease):
 
 
 class TestModel(ModelWithRelease):
+    """ TestModel """
     name1 = models.CharField(max_length=255)
     name2 = models.CharField(max_length=255)
 
@@ -163,13 +178,14 @@ class TestModel(ModelWithRelease):
     ]
 
     def get_serializers(self):
+        """ get_serializers """
         from .serializers import TestModelSerializer, TestModelCoverSerializer
         return {
             'default': {
                 'key': self.get_key(),
                 'type': self.get_name_slug(),
                 'class': TestModelSerializer,
-            }, 
+            },
             'cover': {
                 'key': self.get_key(),
                 'type': 'cover',
@@ -178,27 +194,30 @@ class TestModel(ModelWithRelease):
         }
 
     def get_key(self):
+        """ get_key """
         return 'test_model'
 
     def __str__(self):
+        """ __str__ """
         return '{} - {}'.format(self.name1, self.name2)
 
     def get_redirections(self):
+        """ get_redirections """
         redirects = Redirect.objects.all()
 
         redirect_objects = []
 
         for redirect in redirects:
             redirect_object = model_to_dict(redirect)
-            del(redirect_object['id'])
-            del(redirect_object['site'])
+            del redirect_object['id']
+            del redirect_object['site']
             if redirect_object['redirect_page']:
                 redirect_object['redirect_link'] = Page.objects.get(id=4).url
-                del(redirect_object['redirect_page'])
+                del redirect_object['redirect_page']
             else:
-                del(redirect_object['redirect_page'])
+                del redirect_object['redirect_page']
             redirect_objects.append(redirect_object)
-        
+
         return redirect_objects
 
     @property
@@ -222,6 +241,7 @@ class TestModel(ModelWithRelease):
 @receiver(post_save, sender=SiteSettings)
 @receiver(post_delete, sender=SiteSettings)
 def update_site_code_for_content_release(sender, instance, **kwargs):
+    """ update_site_code_for_content_release """
     from django import forms
     from wagtail.admin.edit_handlers import FieldPanel
     from wagtailsnapshotpublisher.models import WSSPContentRelease, ModelWithRelease

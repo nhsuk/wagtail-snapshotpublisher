@@ -1,3 +1,7 @@
+"""
+.. module:: wagtailsnapshotpublisher.models
+"""
+
 import json
 import re
 
@@ -21,7 +25,7 @@ from djangosnapshotpublisher.models import ContentRelease
 from djangosnapshotpublisher.publisher_api import PublisherAPI
 
 from .panels import ReadOnlyPanel
-from .utils import getFromDict, setInDict, delInDict, get_dynamic_element_keys
+from .utils import get_from_dict, set_in_dict, del_in_dict, get_dynamic_element_keys
 
 
 site_code_widget = None
@@ -38,7 +42,7 @@ VERSION_TYPES = (
 
 
 class WSSPContentRelease(ContentRelease):
-
+    """ WSSPContentRelease """
     version_type = models.IntegerField(choices=VERSION_TYPES, default=1)
     restored = models.BooleanField(default=False)
 
@@ -62,7 +66,8 @@ class WSSPContentRelease(ContentRelease):
             [
                 FieldPanel('use_current_live_as_base_release'),
                 FieldPanel('base_release'),
-                HelpPanel(_('If you active the current live release, the base release will be ignore')),
+                HelpPanel(_(
+                    'If you active the current live release, the base release will be ignore')),
             ],
             heading='Publishing',
         )
@@ -95,25 +100,29 @@ class WSSPContentRelease(ContentRelease):
             self.site_code, self.version, self.title, self.get_status_display())
 
     class Meta:
+        """ Meta """
         verbose_name = 'Release'
 
     @classmethod
     def get_panel_field(cls, field_name):
+        """ get_panel_field """
         panels = cls.panels
         return cls.get_panel_field_from_panels(panels, field_name)
 
     @classmethod
     def get_panel_field_from_panels(cls, panels, field_name):
-        for i in range(len(panels)):
-            if hasattr(panels[i], 'field_name') and panels[i].field_name == field_name:
-                return(panels[i])
-            if hasattr(panels[i], 'children'):
-                return cls.get_panel_field_from_panels(panels[i].children, field_name)
+        """ get_panel_field_from_panels """
+        for i, item in enumerate(panels):
+            if hasattr(item, 'field_name') and item.field_name == field_name:
+                return item
+            if hasattr(item, 'children'):
+                return cls.get_panel_field_from_panels(item.children, field_name)
         return None
 
 
 @receiver(pre_save, sender=WSSPContentRelease)
 def define_version(sender, instance, *args, **kwargs):
+    """ define_version """
     if not instance.version and instance.status != 0:
         previous_version = '0.0'
 
@@ -138,13 +147,12 @@ def define_version(sender, instance, *args, **kwargs):
             previous_version = content_releases.first().version
 
         version_list = previous_version.split('.')
-        i=0
-        for i in range(len(version_list)):
+        # i=0
+        for i, item in enumerate(version_list):
             if i == instance.version_type:
-                version_list[i] = str(int(version_list[i]) + 1)
+                version_list[i] = str(int(item) + 1)
             if i > instance.version_type:
                 version_list[i] = '0'
-            i += 1
 
         next_version = '.'.join(version_list)
         instance.version = next_version
@@ -153,8 +161,9 @@ def define_version(sender, instance, *args, **kwargs):
 
 @receiver(post_save, sender=WSSPContentRelease)
 def fix_versions_conflict(sender, instance, *args, **kwargs):
+    """ fix_versions_conflict """
     duplicate_version = WSSPContentRelease.objects.filter(
-            site_code=instance.site_code,
+                site_code=instance.site_code,
         ).values(
             'version'
         ).annotate(
@@ -175,7 +184,7 @@ def fix_versions_conflict(sender, instance, *args, **kwargs):
             content_release = ContentRelease.objects.get(id=release.id)
             content_release.version = None
             content_release.save()
-        
+
         # update version
         for release in releases_to_update:
             release.version = None
@@ -186,6 +195,7 @@ def fix_versions_conflict(sender, instance, *args, **kwargs):
 @receiver(post_save, sender=ContentRelease)
 @receiver(post_save, sender=WSSPContentRelease)
 def load_dynamic_element(sender, instance, *args, **kwargs):
+    """ load_dynamic_element """
     if instance.is_live:
         # get all ReleaseContent with dynamic element
         release_documents = instance.release_documents.filter(
@@ -204,46 +214,46 @@ def load_dynamic_element(sender, instance, *args, **kwargs):
 
 
 def document_load_dynamic_elements(content_release, content):
+    """ document_load_dynamic_elements """
     updated = False
 
     if 'dynamic_element_keys' in content:
-        from django.apps import apps
         elements_to_remove = []
 
         for elt_list in content['dynamic_element_keys']:
-            item = getFromDict(content, elt_list)
+            item = get_from_dict(content, elt_list)
 
             try:
-                Model = apps.get_model(item['app'], item['class'])
-                loaded_instance = Model.objects.get(id=item['id'])
+                model = apps.get_model(item['app'], item['class'])
+                loaded_instance = model.objects.get(id=item['id'])
                 item_serializer = loaded_instance.get_serializers()[item['serializer']]
 
                 publisher_api = PublisherAPI()
-                reponse = publisher_api.get_document_from_content_release(
+                response = publisher_api.get_document_from_content_release(
                     content_release.site_code,
                     content_release.uuid,
                     item_serializer['key'],
                     item_serializer['type'],
                 )
 
-                if reponse['status'] == 'success':
-                    setInDict(content, elt_list, json.loads(reponse['content'].document_json))
+                if response['status'] == 'success':
+                    set_in_dict(content, elt_list, json.loads(reponse['content'].document_json))
                 else:
-                    raise('''Content Release doesn't exist''')
+                    raise Exception(response['error_msg'])
             except:
                 elements_to_remove.append(elt_list[:-1])
-                # delInDict(content, elt_list[:-1])
 
         #save document with loaded dynamic content
         for element_to_remove in elements_to_remove[::-1]:
-            delInDict(content, element_to_remove)
-        del(content['dynamic_element_keys'])
+            del_in_dict(content, element_to_remove)
+        del content['dynamic_element_keys']
         updated = True
 
     return content, updated
 
 
 class WithRelease(models.Model):
+    """ WithRelease """
     content_release = models.ForeignKey(
         WSSPContentRelease,
         related_name='%(class)s_content_release',
@@ -255,23 +265,29 @@ class WithRelease(models.Model):
     )
 
     class Meta:
+        """ Meta """
         abstract = True
 
     @property
     def live_releave(self):
-        return WSSPContentRelease.objects.live(site_code=self.site_code)
+        """ live_releave """
+        return WSSPContentRelease.objects.live(site_code=self.content_release.site_code)
 
     def get_key(self):
+        """ get_key """
         return self.id
 
     def get_name_slug(self):
-        if hasattr(self.__class__, 'slug_name') and self.__class__.slug_name:
-            return self.slug_name
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', self.__class__.__name__)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+        """ get_name_slug from classname"""
+        snake_case = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', self.__class__.__name__)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', snake_case).lower()
 
+    def get_serializers(self):
+        """ get_serializers """
+        raise ValueError(_('get_serializers is not define'))
 
     def publish_to_release(self, instance=None, content_release=None, extra_parameters={}):
+        """ publish_to_release """
         if not instance:
             instance = self
 
@@ -286,12 +302,12 @@ class WithRelease(models.Model):
             data = serialized_page.data
 
             dynamic_element_keys = get_dynamic_element_keys(data)
-            if dynamic_element_keys and len(dynamic_element_keys) > 0:
+            if dynamic_element_keys:
                 data.update({
                     'dynamic_element_keys': dynamic_element_keys,
                 })
                 have_dynamic_elements = True
-            
+
             extra_parameters.update({
                 'have_dynamic_elements': have_dynamic_elements,
             })
@@ -306,7 +322,12 @@ class WithRelease(models.Model):
                 extra_parameters,
             )
 
+            if response['status'] != 'success':
+                raise Exception(response['error_msg'])
+
+
     def unpublish_or_delete_from_release(self, release_id=None, recursively=False, delete=False):
+        """ unpublish_or_delete_from_release """
         if not release_id:
             pass
         else:
@@ -329,13 +350,18 @@ class WithRelease(models.Model):
                     'content_type': serializer_item['type'],
                 }
 
+                response = None
                 if delete:
-                    reponse = publisher_api.delete_document_from_content_release(**paramaters)
+                    response = publisher_api.delete_document_from_content_release(**paramaters)
                 else:
-                    reponse = publisher_api.unpublish_document_from_content_release(**paramaters)
+                    response = publisher_api.unpublish_document_from_content_release(**paramaters)
+
+                if response['status'] != 'success':
+                    raise Exception(response['error_msg'])
 
 
 class ModelWithRelease(WithRelease):
+    """ ModelWithRelease """
     site_code = models.SlugField(max_length=100, blank=True, null=True)
     publish_to_live_release = models.BooleanField(default=False)
 
@@ -346,18 +372,19 @@ class ModelWithRelease(WithRelease):
     ]
 
     class Meta:
+        """ Meta """
         abstract = True
 
-    def get_serializers(self):
-        return []
-
     def get_app(self):
+        """ get_app """
         return self.__class__._meta.app_label
 
     def get_class(self):
+        """ get_class """
         return self.__class__.__name__.lower()
-    
+
     def clean(self):
+        """ clean """
         super().clean()
 
         # get live release
@@ -367,41 +394,47 @@ class ModelWithRelease(WithRelease):
             response = publisher_api.get_live_content_release(self.site_code)
             if response['status'] == 'error':
                 raise ValidationError({'site_code': response['error_msg']})
-            
+
             self.content_release = WSSPContentRelease.objects.get(id=response['content'].id)
 
 
     def save(self, *args, **kwargs):
+        """ save """
         if self.content_release:
             self.publish_to_release()
         super().save(*args, **kwargs)
 
     @classmethod
     def get_panel_field(cls, field_name):
+        """ get_panel_field """
         panels = cls.panels
         return cls.get_panel_field_from_panels(panels, field_name)
 
     @classmethod
     def get_panel_field_from_panels(cls, panels, field_name):
-        for i in range(len(panels)):
-            if hasattr(panels[i], 'field_name') and panels[i].field_name == field_name:
-                return(panels[i])
-            if hasattr(panels[i], 'children'):
-                return cls.get_panel_field_from_panels(panels[i].children, field_name)
+        """ get_panel_field_from_panels """
+        for i, item in enumerate(panels):
+            if hasattr(item, 'field_name') and item.field_name == field_name:
+                return item
+            if hasattr(item, 'children'):
+                return cls.get_panel_field_from_panels(item.children, field_name)
         return None
 
 
 class PageWithRelease(Page, WithRelease):
-
+    """ PageWithRelease """
     class Meta:
+        """ Meta """
         abstract = True
 
     def get_name_slug(self):
+        """ get_name_slug """
         return 'page'
 
     def serve_preview(self, request, mode_name='default', load_dynamic_element=False):
+        """ serve_preview """
         serializers = self.get_serializers()
-        mode_name = mode_name if mode_name else 'default'        
+        mode_name = mode_name if mode_name else 'default'
         serialized_page = serializers[mode_name]['class'](instance=self)
         data = serialized_page.data
 
@@ -414,11 +447,14 @@ class PageWithRelease(Page, WithRelease):
                 data, updated = document_load_dynamic_elements(self.live_releave, data)
         return JsonResponse(data)
 
-    def save_revision(self, user=None, submitted_for_moderation=False, approved_go_live_at=None, changed=True):
+    def save_revision(self, user=None, submitted_for_moderation=False, approved_go_live_at=None,
+                      changed=True):
+        """ save_revision """
         assigned_release = self.content_release
         self.content_release = None
 
-        revision = super(PageWithRelease, self).save_revision(user, submitted_for_moderation, approved_go_live_at, changed)
+        revision = super(PageWithRelease, self).save_revision(
+            user, submitted_for_moderation, approved_go_live_at, changed)
         revision.publish()
 
         if assigned_release:

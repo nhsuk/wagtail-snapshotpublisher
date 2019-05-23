@@ -1,3 +1,7 @@
+"""
+.. module:: test_page.serializers
+"""
+
 from rest_framework import serializers
 
 from wagtail.api.v2.serializers import StreamField
@@ -6,9 +10,11 @@ from .models import TestPage, TestModel
 
 
 class TestPageSerializer(serializers.ModelSerializer):
+    """ TestPageSerializer """
     body = StreamField()
 
     class Meta:
+        """ Meta """
         model = TestPage
         fields = (
             'title',
@@ -19,7 +25,9 @@ class TestPageSerializer(serializers.ModelSerializer):
 
 
 class TestPageCoverSerializer(serializers.ModelSerializer):
+    """ TestPageCoverSerializer """
     class Meta:
+        """ Meta """
         model = TestPage
         fields = (
             'title',
@@ -28,14 +36,17 @@ class TestPageCoverSerializer(serializers.ModelSerializer):
 
 
 class TestModelSerializer(serializers.ModelSerializer):
+    """ TestModelSerializer """
     body = StreamField()
 
-    def to_representation(self, data):
-        serialized_data = super(TestModelSerializer, self).to_representation(data)
-        serialized_data['redirects'] = data.get_redirections()
+    def to_representation(self, instance):
+        """ to_representation """
+        serialized_data = super(TestModelSerializer, self).to_representation(instance)
+        serialized_data['redirects'] = instance.get_redirections()
         return serialized_data
 
     class Meta:
+        """ Meta """
         model = TestModel
         fields = (
             'name1',
@@ -46,8 +57,10 @@ class TestModelSerializer(serializers.ModelSerializer):
 
 
 class TestModelCoverSerializer(serializers.ModelSerializer):
+    """ TestModelCoverSerializer """
 
     class Meta:
+        """ Meta """
         model = TestModel
         fields = (
             'name1',
