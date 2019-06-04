@@ -645,9 +645,10 @@ class WagtailSnapshotPublisherViewTests(TestCase):
             'content_release': [self.content_release.id],
             'site_code': [self.content_release.site_code],
         })
-        view_response = preview_model(request, 'test_page', 'testmodel', self.test_model.id, 'default')
+        view_response = preview_model(request, 'test_page', 'testmodel', self.test_model.id, 'default', True)
 
         self.assertEqual(view_response.status_code, 200)
+        print(json.loads(view_response.content))
         self.assertEqual(json.loads(view_response.content), {
             'name1': 'Preview Test model2 name1',
             'name2': 'Preview Test model2 name2',

@@ -105,7 +105,7 @@ def remove(request, content_app, content_class, content_id, release_id):
 
 
 def preview_model(request, content_app, content_class, content_id, preview_mode='default',
-                  load_dynamic_element=True):
+                  load_dynamic_element=False):
     """ preview_model """
     model_class = apps.get_model(content_app, content_class)
     form_class = modelform_factory(
