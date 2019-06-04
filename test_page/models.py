@@ -152,10 +152,6 @@ class TestPage(PageWithRelease):
         return self.preview_modes[0][0]
 
 
-# TestPage.release_config['can_publish_to_release'] = True
-# TestPage.release_config['can_publish_to_live_release'] = True
-
-
 class TestModel(ModelWithRelease):
     """ TestModel """
     name1 = models.CharField(max_length=255)
@@ -233,9 +229,6 @@ class TestModel(ModelWithRelease):
             ('default', 'Default'),
             ('cover', 'Cover'),
         ]
-
-# TestPage.release_config['can_publish_to_release'] = False
-# TestPage.release_config['can_publish_to_live_release'] = False
 
 
 @receiver(post_save, sender=SiteSettings)

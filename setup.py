@@ -18,7 +18,7 @@ setup(
     include_package_data=True,
     # install_requires=install_dependencies,
     license='MIT',
-    url='https://github.com/yohanlebret/wagtail-snapshotpublisher',
+    url='https://github.com/nhsuk/wagtail-snapshotpublisher',
     description='Add Release mechanism from django-snapshotpublisher to wagtail',
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',
