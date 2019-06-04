@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.test import Client
 from django.utils import timezone
+from django.urls import reverse
 
 from wagtail.contrib.redirects.models import Redirect
 from wagtail.core.models import Page
@@ -21,6 +22,7 @@ from djangosnapshotpublisher.publisher_api import PublisherAPI
 from wagtailsnapshotpublisher.models import WithRelease, WSSPContentRelease
 
 from test_page.models import TestModel, TestPage, TestRelatedModel
+from test_page.wagtail_hooks import TestModelAdmin
 
 
 class WSSPContentReleaseTests(WagtailPageTests):
@@ -77,9 +79,12 @@ class WithReleaseTests(WagtailPageTests):
         except ValueError:
             pass
     
-    def test_live_releave(self):
-        """ test_live_releave """
-        self.assertEqual(self.testmodel_with_release.live_releave, self.content_release)
+    def test_live_release(self):
+        """ test_live_release """
+        self.assertEqual(self.testmodel_with_release.live_release, self.content_release)
+
+        self.testmodel_with_release.content_release = None
+        self.assertEqual(self.testmodel_with_release.live_release, None)
 
     def test_publish_to_release(self):
         """ test_publish_to_release """
@@ -88,12 +93,13 @@ class WithReleaseTests(WagtailPageTests):
         """ test_unpublish_or_delete_from_release """
 
 
-
 class ModelWithReleaseTests(WagtailPageTests):
     """ ModelWithReleaseTests """
 
     def setUp(self):
         """ setUp """
+
+        self.client = Client()
 
         # Create ContentRelease
         self.content_release = WSSPContentRelease(
@@ -123,10 +129,8 @@ class ModelWithReleaseTests(WagtailPageTests):
         """ test_create_then_publish """
 
         # Publish TestModel to a release
-        c = Client()
-        response = c.post(
-            '/admin/test_page/testmodel/edit/{}/'.format(self.test_model.id),
-        )
+        url = TestModelAdmin().url_helper.get_action_url('edit', self.test_model.id)
+        response = self.client.post(url)
 
         self.assertEqual(response.status_code, 302)
 
@@ -136,14 +140,12 @@ class ModelWithReleaseTests(WagtailPageTests):
             content_type=serializers['default']['type'],
             content_releases=self.content_release,
         )
-
         self.assertEqual(
             json.loads(release_document.document_json),
             {
                 'name1': 'Test Name1',
                 'name2': 'Test Name2',
                 'body': [],
-                'content_release':  self.content_release.id,
                 'redirects': [{
                     'old_path': '/test',
                     'is_permanent': True,
@@ -152,14 +154,14 @@ class ModelWithReleaseTests(WagtailPageTests):
             }
         )
 
+# {'name1': 'Test Name1', 'name2': 'Test Name2', 'body': [], 'redirects': [{'old_path': '/test', 'is_permanent': True, 'redirect_link': '/test2'}]}
+
     def test_update_then_publish(self):
         """ test_update_then_publish """
 
         # Publish TestModel to a release
-        c = Client()
-        response = c.post(
-            '/admin/test_page/testmodel/edit/{}/'.format(self.test_model.id),
-        )
+        url = TestModelAdmin().url_helper.get_action_url('edit', self.test_model.id)
+        response = self.client.post(url)
 
         self.assertEqual(response.status_code, 302)
 
@@ -177,10 +179,9 @@ class ModelWithReleaseTests(WagtailPageTests):
         self.test_model.save()
 
         # Republish TestModel to a release
-        c = Client()
-        response = c.post(
-            '/admin/test_page/testmodel/edit/{}/'.format(self.test_model.id),
-        )
+        url = TestModelAdmin().url_helper.get_action_url('edit', self.test_model.id)
+        response = self.client.post(url)
+
         self.assertEqual(response.status_code, 302)
 
         serializers = self.test_model.get_serializers()
@@ -196,7 +197,6 @@ class ModelWithReleaseTests(WagtailPageTests):
                 'name1': 'Test Name3',
                 'name2': 'Test Name4',
                 'body': [],
-                'content_release':  self.content_release.id,
                 'redirects': [{
                     'old_path': '/test',
                     'is_permanent': True,
@@ -213,21 +213,19 @@ class ModelWithReleaseTests(WagtailPageTests):
         """ test_update_unpublish """
 
         # Publish TestModel to a release
-        c = Client()
-        response = c.post(
-            '/admin/test_page/testmodel/edit/{}/'.format(self.test_model.id),
-        )
+        url = TestModelAdmin().url_helper.get_action_url('edit', self.test_model.id)
+        response = self.client.post(url)
 
         self.assertEqual(response.status_code, 302)
 
         # Unpublish TestModel to a release
-        c = Client()
-        response = c.post(
-            '/admin/test_page/testmodel/unpublish/{}/{}/'.format(
-                self.test_model.id,
-                self.content_release.id,
-            ),
-        )
+        url = reverse('wagtailsnapshotpublisher_admin:unpublish_from_release', kwargs={
+            'content_app': 'test_page',
+            'content_class': 'testmodel',
+            'content_id': self.test_model.id,
+            'release_id': self.content_release.id,
+        })
+        response = self.client.get(url)
 
         self.assertEqual(response.status_code, 302)
 
@@ -390,6 +388,8 @@ class PageWithReleaseTests(WagtailPageTests):
                 },
             },
         }
+        self.client = Client()
+        self.client.force_login(self.user)
 
 
     def test_create_then_publish(self):
@@ -476,16 +476,13 @@ class PageWithReleaseTests(WagtailPageTests):
         self.test_page.save_revision(self.user)
 
         # Unpublish TestPage to a release
-        c = Client()
-        response = c.post(
-            '/admin/pages/{}/unpublish/{}/'.format(
-                self.test_page.id,
-                self.content_release.id,
-            ),
-        )
+        url = reverse('wagtailsnapshotpublisher_admin:unpublish_page_from_release', kwargs={
+            'page_id': self.test_page.id,
+            'release_id': self.content_release.id,
+        })
+        response = self.client.get(url)
 
         self.assertEqual(response.status_code, 302)
-
 
         serializers = self.test_page.get_serializers()
         self.assertFalse(ReleaseDocument.objects.filter(
@@ -521,13 +518,11 @@ class PageWithReleaseTests(WagtailPageTests):
         self.assertEqual(ReleaseDocument.objects.filter(content_type='cover').count(), 4)
 
         # Unpublish TestPage recursively to a release
-        c = Client()
-        response = c.post(
-            '/admin/pages/{}/unpublish/{}/recursively/'.format(
-                self.test_page.id,
-                self.content_release.id,
-            ),
-        )
+        url = reverse('wagtailsnapshotpublisher_admin:unpublish_recursively_page_from_release', kwargs={
+            'page_id': self.test_page.id,
+            'release_id': self.content_release.id,
+        })
+        response = self.client.get(url)
 
         self.assertEqual(ReleaseDocument.objects.filter(content_type='page').count(), 1)
         self.assertEqual(ReleaseDocument.objects.filter(content_type='cover').count(), 1)
@@ -546,13 +541,11 @@ class PageWithReleaseTests(WagtailPageTests):
         self.test_page.save_revision(self.user)
 
         # Remove TestPage to a release
-        c = Client()
-        response = c.post(
-            '/admin/pages/{}/remove/{}/'.format(
-                self.test_page.id,
-                self.content_release.id,
-            ),
-        )
+        url = reverse('wagtailsnapshotpublisher_admin:remove_page_from_release', kwargs={
+            'page_id': self.test_page.id,
+            'release_id': self.content_release.id,
+        })
+        response = self.client.get(url)
 
         self.assertEqual(response.status_code, 302)
 
@@ -591,13 +584,11 @@ class PageWithReleaseTests(WagtailPageTests):
         self.assertEqual(ReleaseDocument.objects.filter(content_type='cover').count(), 4)
 
         # Remove TestPage recursively to a release
-        c = Client()
-        response = c.post(
-            '/admin/pages/{}/remove/{}/recursively/'.format(
-                self.test_page.id,
-                self.content_release.id,
-            ),
-        )
+        url = reverse('wagtailsnapshotpublisher_admin:remove_recursively_page_from_release', kwargs={
+            'page_id': self.test_page.id,
+            'release_id': self.content_release.id,
+        })
+        response = self.client.get(url)
 
         self.assertEqual(ReleaseDocument.objects.filter(
             content_releases=self.content_release,
@@ -716,12 +707,10 @@ class PageWithReleaseTests(WagtailPageTests):
         ])
 
         # Restore content_release
-        c = Client()
-        response = c.post(
-            '/admin/wagtailsnapshotpublisher/wsspcontentrelease/restore/{}/'.format(
-                self.content_release.id,
-            ),
-        )
+        url = reverse('wagtailsnapshotpublisher_admin:release_restore', kwargs={
+            'release_id': self.content_release.id,
+        })
+        response = self.client.get(url)
 
         restored_release = WSSPContentRelease.objects.get(
             site_code='site1',

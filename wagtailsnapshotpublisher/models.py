@@ -237,7 +237,7 @@ def document_load_dynamic_elements(content_release, content):
                 )
 
                 if response['status'] == 'success':
-                    set_in_dict(content, elt_list, json.loads(reponse['content'].document_json))
+                    set_in_dict(content, elt_list, json.loads(response['content'].document_json))
                 else:
                     raise Exception(response['error_msg'])
             except:
@@ -269,9 +269,11 @@ class WithRelease(models.Model):
         abstract = True
 
     @property
-    def live_releave(self):
-        """ live_releave """
-        return WSSPContentRelease.objects.live(site_code=self.content_release.site_code)
+    def live_release(self):
+        """ live_release """
+        if self.content_release:
+            return WSSPContentRelease.objects.live(site_code=self.content_release.site_code)
+        return None
 
     def get_key(self):
         """ get_key """
@@ -326,38 +328,35 @@ class WithRelease(models.Model):
                 raise Exception(response['error_msg'])
 
 
-    def unpublish_or_delete_from_release(self, release_id=None, recursively=False, delete=False):
+    def unpublish_or_delete_from_release(self, release_id, recursively=False, delete=False):
         """ unpublish_or_delete_from_release """
-        if not release_id:
-            pass
-        else:
-            if recursively:
-                for child_page in self.get_children():
-                    try:
-                        child_page.specific.unpublish_or_delete_from_release(
-                            release_id, recursively, delete)
-                    except AttributeError:
-                        pass
-            content_release = WSSPContentRelease.objects.get(id=release_id)
-            publisher_api = PublisherAPI()
+        if recursively:
+            for child_page in self.get_children():
+                try:
+                    child_page.specific.unpublish_or_delete_from_release(
+                        release_id, recursively, delete)
+                except AttributeError:
+                    pass
+        content_release = WSSPContentRelease.objects.get(id=release_id)
+        publisher_api = PublisherAPI()
 
-            serializers = self.get_serializers()
-            for key, serializer_item in serializers.items():
-                paramaters = {
-                    'site_code': content_release.site_code,
-                    'release_uuid': content_release.uuid,
-                    'document_key': serializer_item['key'],
-                    'content_type': serializer_item['type'],
-                }
+        serializers = self.get_serializers()
+        for key, serializer_item in serializers.items():
+            paramaters = {
+                'site_code': content_release.site_code,
+                'release_uuid': content_release.uuid,
+                'document_key': serializer_item['key'],
+                'content_type': serializer_item['type'],
+            }
 
-                response = None
-                if delete:
-                    response = publisher_api.delete_document_from_content_release(**paramaters)
-                else:
-                    response = publisher_api.unpublish_document_from_content_release(**paramaters)
+            response = None
+            if delete:
+                response = publisher_api.delete_document_from_content_release(**paramaters)
+            else:
+                response = publisher_api.unpublish_document_from_content_release(**paramaters)
 
-                if response['status'] != 'success':
-                    raise Exception(response['error_msg'])
+            if response['status'] != 'success':
+                raise Exception(response['error_msg'])
 
 
 class ModelWithRelease(WithRelease):
@@ -433,6 +432,7 @@ class PageWithRelease(Page, WithRelease):
 
     def serve_preview(self, request, mode_name='default', load_dynamic_element=False):
         """ serve_preview """
+        request.is_preview = True
         serializers = self.get_serializers()
         mode_name = mode_name if mode_name else 'default'
         serialized_page = serializers[mode_name]['class'](instance=self)
@@ -444,7 +444,7 @@ class PageWithRelease(Page, WithRelease):
                 data.update({
                     'dynamic_element_keys': dynamic_element_keys,
                 })
-                data, updated = document_load_dynamic_elements(self.live_releave, data)
+                data, updated = document_load_dynamic_elements(self.live_release, data)
         return JsonResponse(data)
 
     def save_revision(self, user=None, submitted_for_moderation=False, approved_go_live_at=None,
@@ -458,10 +458,10 @@ class PageWithRelease(Page, WithRelease):
         revision.publish()
 
         if assigned_release:
-            if submitted_for_moderation:
-                pass
-            else:
-                page = revision.as_page_object()
-                self.publish_to_release(page, assigned_release, {'revision_id': revision.id})
+            # if submitted_for_moderation:
+            #     pass
+            # else:
+            page = revision.as_page_object()
+            self.publish_to_release(page, assigned_release, {'revision_id': revision.id})
 
         return revision

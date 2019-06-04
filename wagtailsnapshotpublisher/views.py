@@ -5,6 +5,7 @@
 import json
 
 from django.apps import apps
+from django.conf import settings
 from django.forms.models import modelform_factory
 from django.http import JsonResponse, HttpResponseServerError, Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -36,8 +37,9 @@ def get_content_details(site_code, release_uuid, content_type, content_key):
             if response['status'] == 'error':
                 return response
             else:
-                release_id = response['content']
-                content_release = WSSPContentRelease.objects.get(id=release_id)
+                release = response['content']
+                content_release = WSSPContentRelease.objects.get(id=release.id)
+                release_uuid = content_release.uuid
     except WSSPContentRelease.DoesNotExist:
         pass
 
@@ -120,10 +122,11 @@ def preview_model(request, content_app, content_class, content_id, preview_mode=
                 data.update({
                     'dynamic_element_keys': dynamic_element_keys,
                 })
-                data, updated = document_load_dynamic_elements(instance.live_releave, data)
+                data, updated = document_load_dynamic_elements(instance.live_release, data)
         return JsonResponse(data)
     else:
-        print(form.errors)
+        if not settings.TESTING:
+            print(form.errors)
         return HttpResponseServerError('Form is not valid')
 
 
@@ -142,12 +145,12 @@ def preview_instance(request, content_app, content_class, content_id, preview_mo
             data.update({
                 'dynamic_element_keys': dynamic_element_keys,
             })
-            data, updated = document_load_dynamic_elements(instance.live_releave, data)
+            data, updated = document_load_dynamic_elements(instance.live_release, data)
     return JsonResponse(data)
 
 
-def release_detail(request, release_id, set_live_button=False, release_id_to_compare_to=None):
-    """ release_detail """
+def compare_release(request, release_id, release_id_to_compare_to=None):
+    """ compare_release """
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
 
@@ -164,7 +167,6 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
     if request.method == 'POST' and release_id_to_compare_to is None:
         publish_release_form = PublishReleaseForm(request.POST)
         if publish_release_form.is_valid():
-            # publish_type = publish_release_form.cleaned_data['publish_type']
             publish_datetime = publish_release_form.cleaned_data['publish_datetime']
 
             if publish_datetime:
@@ -181,17 +183,18 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
     compare_with_live = True
     response = publisher_api.get_live_content_release(release.site_code)
     if response['status'] == 'error':
-        return render(request, 'wagtailadmin/release/detail.html', {
-            'set_live_button': set_live_button,
+        return {
             'release': release,
             'error_msg': response['error_msg'],
             'publish_release_form': publish_release_form,
-        })
-    release_to_compare_to = response['content']
+        }
 
+    release_to_compare_to = response['content']
     if release_id_to_compare_to and release_to_compare_to.id != release_id_to_compare_to:
         compare_with_live = False
-        release_to_compare_to = WSSPContentRelease.objects.get(pk=release_id_to_compare_to)
+        release_to_compare_to = WSSPContentRelease.objects.get(id=release_id_to_compare_to)
+    else:
+        release_to_compare_to = WSSPContentRelease.objects.get(id=release_to_compare_to.id)
 
     response = publisher_api.compare_content_releases(release.site_code, release.uuid,
                                                       release_to_compare_to.uuid)
@@ -223,26 +226,28 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
                 changed_pages.append(item)
         else:
             extra_contents.append(item)
-
-    return render(request, 'wagtailadmin/release/detail.html', {
+    
+    return {
         'comparison': comparison,
         'added_pages': added_pages,
         'changed_pages': changed_pages,
         'removed_pages': removed_pages,
         'extra_contents': json.dumps(extra_contents, indent=4) if extra_contents and \
             request.user.has_perm('wagtailadmin.access_dev') else None,
-        'set_live_button': set_live_button,
         'release': release,
         'release_to_compare_to': release_to_compare_to,
         'publish_release_form': publish_release_form,
         'frozen_releases_form': frozen_releases_form,
         'compare_with_live': compare_with_live,
+    }
+
+
+def release_detail(request, release_id, set_live_button=False, release_id_to_compare_to=None):
+    details = compare_release(request, release_id, release_id_to_compare_to)
+    details.update({
+        'set_live_button': set_live_button,
     })
-
-
-def release_set_live_detail(request, release_id):
-    """ release_set_live_detail """
-    return release_detail(request, release_id, set_live_button=True)
+    return render(request, 'wagtailadmin/release/detail.html', details)
 
 
 def release_set_live(request, release_id, publish_date=None):
@@ -258,7 +263,7 @@ def release_set_live(request, release_id, publish_date=None):
         response = publisher_api.set_live_content_release(release.site_code, release.uuid)
 
     if response['status'] != 'success':
-        raise Exception(response['error_msg'])
+        raise Http404(response['error_msg'])
 
     WSSPContentRelease.objects.live(
         site_code=release.site_code,
@@ -272,7 +277,7 @@ def release_archive(request, release_id):
     release = WSSPContentRelease.objects.get(id=release_id)
     response = publisher_api.archive_content_release(release.site_code, release.uuid)
     if response['status'] != 'success':
-        return JsonResponse(response)
+        raise Http404(response['error_msg'])
     return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 

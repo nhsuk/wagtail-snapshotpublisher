@@ -5,7 +5,7 @@
 from modelcluster.fields import ParentalKey
 
 from django.db import models
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import pre_save, post_save, post_delete
 from django.db.utils import ProgrammingError
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
@@ -114,7 +114,7 @@ class TestPage(PageWithRelease):
     @property
     def site_code(self):
         """ site_code """
-        return SiteSettings.objects.get(site=self.get_site()).title
+        return SiteSettings.objects.get(site=self.get_site()).slug
 
     def get_serializers(self):
         """ get_serializers """
@@ -240,13 +240,13 @@ class TestModel(ModelWithRelease):
 
 @receiver(post_save, sender=SiteSettings)
 @receiver(post_delete, sender=SiteSettings)
-def update_site_code_for_content_release(sender, instance, **kwargs):
-    """ update_site_code_for_content_release """
+def update_site_code_widget_for_content_release(sender, instance, **kwargs):
+    """ update_site_code_widget_for_content_release """
     from django import forms
     from wagtail.admin.edit_handlers import FieldPanel
     from wagtailsnapshotpublisher.models import WSSPContentRelease, ModelWithRelease
 
-    site_settings = SiteSettings.objects.exclude(title='').values_list('title', 'title')
+    site_settings = SiteSettings.objects.exclude(title='').values_list('slug', 'slug')
 
     site_code_widget = forms.Select(
         choices=tuple([('', '---------')] + list(site_settings)),
@@ -257,6 +257,19 @@ def update_site_code_for_content_release(sender, instance, **kwargs):
 
 
 try:
-    update_site_code_for_content_release(SiteSettings, None)
+    update_site_code_widget_for_content_release(SiteSettings, None)
 except ProgrammingError:
     pass
+
+
+@receiver(pre_save, sender=SiteSettings)
+def update_site_code_for_content_release(sender, instance, **kwargs):
+    from wagtailsnapshotpublisher.models import WSSPContentRelease
+    try:
+        old_instance = SiteSettings.objects.get(id=instance.id)
+        if old_instance.slug != instance.slug:
+            WSSPContentRelease.objects.filter(
+                site_code=old_instance.slug,
+            ).update(site_code=instance.slug)
+    except SiteSettings.DoesNotExist:
+        pass

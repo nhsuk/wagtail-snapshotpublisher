@@ -20,7 +20,7 @@ from api import api_router
 urlpatterns = [
     # TOADD
     url(r'^admin/', include(custom_admin_urls)),
-    url(r'^sites/', include(api_urls)),
+    url(r'^api/sites/', include(api_urls)),
 
     url(r'^django-admin/', admin.site.urls),
     url(r'^admin/', include(wagtailadmin_urls)),

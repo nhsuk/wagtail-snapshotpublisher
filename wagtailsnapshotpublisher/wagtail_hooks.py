@@ -56,7 +56,7 @@ class ReleaseButtonHelper(ButtonHelper):
 
     def detail_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
         """ detail_revision_button """
-        url = reverse('wagtailsnapshotpublisher_custom_admin:release-detail',
+        url = reverse('wagtailsnapshotpublisher_admin:release_detail',
                       kwargs={'release_id': obj.pk})
         return self.create_button('detail', 'Detail updated pages for this release', url,
                                   classnames_add, classnames_exclude)
@@ -64,7 +64,7 @@ class ReleaseButtonHelper(ButtonHelper):
     def set_live_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
         """ set_live_revision_button """
         url = reverse(
-            'wagtailsnapshotpublisher_custom_admin:release-set-live-detail',
+            'wagtailsnapshotpublisher_admin:release_set_live_detail',
             kwargs={'release_id': obj.pk},
         )
         return self.create_button('set live', 'Set this release live', url, classnames_add,
@@ -72,20 +72,20 @@ class ReleaseButtonHelper(ButtonHelper):
 
     def archive_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
         """ archive_revision_button """
-        url = reverse('wagtailsnapshotpublisher_custom_admin:release-archive',
+        url = reverse('wagtailsnapshotpublisher_admin:release_archive',
                       kwargs={'release_id': obj.pk})
         return self.create_button('archive', 'Archive this release', url, classnames_add,
                                   classnames_exclude)
 
     def restore_button(self, obj, classnames_add=None, classnames_exclude=None):
         """ restore_button """
-        url = reverse('wagtailsnapshotpublisher_custom_admin:release-restore',
+        url = reverse('wagtailsnapshotpublisher_admin:release_restore',
                       kwargs={'release_id': obj.pk})
         return self.create_button('restore', 'Restore', url, classnames_add, classnames_exclude)
 
     def unfreeze_button(self, obj, classnames_add=None, classnames_exclude=None):
         """ unfreeze_button """
-        url = reverse('wagtailsnapshotpublisher_custom_admin:release-unfreeze',
+        url = reverse('wagtailsnapshotpublisher_admin:release_unfreeze',
                       kwargs={'release_id': obj.pk})
         return self.create_button('unfreeze', 'Unfreeze', url, classnames_add, classnames_exclude)
 

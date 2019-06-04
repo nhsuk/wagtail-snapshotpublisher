@@ -31,9 +31,9 @@
 
         {% if frozen_releases_form %}
             {% if set_live_button %}
-                <form action="{% url 'wagtailsnapshotpublisher_custom_admin:release-set-live-detail' release.id %}" method="post">
+                <form action="{% url 'wagtailsnapshotpublisher_admin:release_set_live_detail' release.id %}" method="post">
             {% else %}
-                <form action="{% url 'wagtailsnapshotpublisher_custom_admin:release-detail' release.id %}" method="post">
+                <form action="{% url 'wagtailsnapshotpublisher_admin:release_detail' release.id %}" method="post">
             {% endif %}
                 {% csrf_token %}
                 {{ frozen_releases_form }}
@@ -159,7 +159,7 @@
         
 
         {% if set_live_button %}
-            <form action="{% url 'wagtailsnapshotpublisher_custom_admin:release-set-live-detail' release.id %}" method="post">
+            <form action="{% url 'wagtailsnapshotpublisher_admin:release_set_live_detail' release.id %}" method="post">
                 <h1>Publish</h1>
                 {% csrf_token %}
                 <ul>

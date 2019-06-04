@@ -1,0 +1,47 @@
+[{
+    "model": "djangosnapshotpublisher.contentrelease",
+    "pk": 1,
+    "fields": {
+        "uuid": "4736470b-5c03-4e48-929a-2a25e149e030",
+        "version": null,
+        "title": "Test Current Release",
+        "site_code": "site1",
+        "status": 0,
+        "publish_datetime": null,
+        "use_current_live_as_base_release": false,
+        "base_release": null,
+        "is_live": false,
+        "release_documents": []
+    }
+}, {
+    "model": "wagtailsnapshotpublisher.wsspcontentrelease",
+    "pk": 1,
+    "fields": {
+        "version_type": 1,
+        "restored": false,
+        "release_documents": []
+    }
+}, {
+    "model": "djangosnapshotpublisher.contentrelease",
+    "pk": 2,
+    "fields": {
+        "uuid": "7c02c9a3-89c6-451f-b78c-219deac2a774",
+        "version": null,
+        "title": "Test2 Current Release",
+        "site_code": "site1",
+        "status": 0,
+        "publish_datetime": null,
+        "use_current_live_as_base_release": false,
+        "base_release": null,
+        "is_live": false,
+        "release_documents": []
+    }
+}, {
+    "model": "wagtailsnapshotpublisher.wsspcontentrelease",
+    "pk": 2,
+    "fields": {
+        "version_type": 1,
+        "restored": false,
+        "release_documents": []
+    }
+}]

@@ -8,34 +8,37 @@ from . import views
 
 
 # Override Wagtail paths
-app_name = 'wagtailsnapshotpublisher_custom_admin'
+app_name = 'wagtailsnapshotpublisher_admin'
 urlpatterns = [
     path('pages/<int:page_id>/unpublish/<int:release_id>/', views.unpublish_page,
-         name='unpublish-page-from-release'),
+         name='unpublish_page_from_release'),
     path('pages/<int:page_id>/unpublish/<int:release_id>/recursively/',
-         views.unpublish_recursively_page, name='unpublish-recursively-page-from-release'),
+         views.unpublish_recursively_page, name='unpublish_recursively_page_from_release'),
     path('pages/<int:page_id>/remove/<int:release_id>/', views.remove_page,
-         name='remove-page-from-release'),
+         name='remove_page_from_release'),
     path('pages/<int:page_id>/remove/<int:release_id>/recursively/', views.remove_recursively_page,
-         name='remove-recursively-page-from-release'),
+         name='remove_recursively_page_from_release'),
 
     path('<slug:content_app>/<slug:content_class>/unpublish/<int:content_id>/<int:release_id>/',
-         views.unpublish, name='unpublish-from-release'),
+         views.unpublish, name='unpublish_from_release'),
     path('<slug:content_app>/<slug:content_class>/edit/<int:content_id>/preview/<slug:preview_mode>/',
-         views.preview_model, name='preview-model-admin'),
+         views.preview_model, name='preview_model_admin'),
     path('<slug:content_app>/<slug:content_class>/<int:content_id>/preview/<slug:preview_mode>/',
-         views.preview_instance, name='preview-instance-admin'),
+         views.preview_instance, name='preview_instance_admin'),
 
     path('wagtailsnapshotpublisher/wsspcontentrelease/details/<int:release_id>/',
-         views.release_detail, name='release-detail'),
+         views.release_detail, name='release_detail'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/setlive/<int:release_id>/',
-         views.release_set_live, name='release-set-live'),
+         views.release_set_live, name='release_set_live'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/setlivedetails/<int:release_id>/',
-         views.release_set_live_detail, name='release-set-live-detail'),
+         views.release_set_live,
+         {'set_live_button': True},
+         name='release_set_live_detail',
+     ),
     path('wagtailsnapshotpublisher/wsspcontentrelease/archive/<int:release_id>/',
-         views.release_archive, name='release-archive'),
+         views.release_archive, name='release_archive'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/restore/<int:release_id>/',
-         views.release_restore, name='release-restore'),
+         views.release_restore, name='release_restore'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/unfreeze/<int:release_id>/',
-         views.release_unfreeze, name='release-unfreeze'),
+         views.release_unfreeze, name='release_unfreeze'),
 ]

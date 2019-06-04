@@ -35,12 +35,12 @@
             <li class="preview">
                 {% for mode_name, mode_display_name in instance.preview_modes %}
 
-                    <button class="button action-model-preview icon icon-view" data-submit="{% url 'wagtailsnapshotpublisher_custom_admin:preview-model-admin' instance.get_app instance.get_class instance.id mode_name %}" data-auto-update="false">{{mode_display_name}} Preview</button>
+                    <button class="button action-model-preview icon icon-view" data-submit="{% url 'wagtailsnapshotpublisher_admin:preview_model_admin' instance.get_app instance.get_class instance.id mode_name %}" data-auto-update="false">{{mode_display_name}} Preview</button>
                 {% endfor %}
             </li>
         {% else %}
             <li class="preview">
-                <button class="button action-model-preview icon icon-view" data-submit="{% url 'wagtailsnapshotpublisher_custom_admin:preview-model-admin' instance.get_app instance.get_class instance.id 'default' %}" data-auto-update="false">Preview</button>
+                <button class="button action-model-preview icon icon-view" data-submit="{% url 'wagtailsnapshotpublisher_admin:preview_model_admin' instance.get_app instance.get_class instance.id 'default' %}" data-auto-update="false">Preview</button>
             </li>
         {% endif %}
 

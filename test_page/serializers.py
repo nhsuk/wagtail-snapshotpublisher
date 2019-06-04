@@ -52,7 +52,6 @@ class TestModelSerializer(serializers.ModelSerializer):
             'name1',
             'name2',
             'body',
-            'content_release',
         )
 
 
