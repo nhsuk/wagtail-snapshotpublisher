@@ -54,7 +54,7 @@
         "submitted_for_moderation": false,
         "created_at": "2019-05-28T15:10:58.248Z",
         "user": 8,
-        "content_json": "{\"pk\": 3, \"path\": \"00010001\", \"depth\": 2, \"numchild\": 0, \"title\": \"Test1\", \"draft_title\": \"Test1\", \"slug\": \"test1\", \"content_type\": 8, \"live\": true, \"has_unpublished_changes\": false, \"url_path\": \"/test1/\", \"owner\": 8, \"seo_title\": \"\", \"show_in_menus\": false, \"search_description\": \"\", \"go_live_at\": null, \"expire_at\": null, \"expired\": false, \"locked\": false, \"first_published_at\": \"2019-05-28T15:03:35.380Z\", \"last_published_at\": \"2019-05-28T15:09:15.397Z\", \"latest_revision_created_at\": \"2019-05-28T15:09:15.355Z\", \"live_revision\": 3, \"content_release\": null, \"name1\": \"Name1\", \"name2\": \"Name2\", \"body\": \"[{\\\"type\\\": \\\"simple_richtext\\\", \\\"value\\\": {\\\"title\\\": \\\"Title1\\\", \\\"body\\\": \\\"<p>Body1</p>\\\"}, \\\"id\\\": \\\"ba2832a9-f580-424f-bee8-f081a3eb7b86\\\"}]\", \"test_related_model\": [{\"pk\": 1, \"test_page\": 3, \"name\": \"Test\"}]}",
+        "content_json": "{\"pk\": 3, \"path\": \"00010001\", \"depth\": 2, \"numchild\": 0, \"title\": \"Test1\", \"draft_title\": \"Test1\", \"slug\": \"test1\", \"content_type\": [\"test_page\", \"testpage\"], \"live\": true, \"has_unpublished_changes\": false, \"url_path\": \"/test1/\", \"owner\": 8, \"seo_title\": \"\", \"show_in_menus\": false, \"search_description\": \"\", \"go_live_at\": null, \"expire_at\": null, \"expired\": false, \"locked\": false, \"first_published_at\": \"2019-05-28T15:03:35.380Z\", \"last_published_at\": \"2019-05-28T15:09:15.397Z\", \"latest_revision_created_at\": \"2019-05-28T15:09:15.355Z\", \"live_revision\": 3, \"content_release\": null, \"name1\": \"Name1\", \"name2\": \"Name2\", \"body\": \"[{\\\"type\\\": \\\"simple_richtext\\\", \\\"value\\\": {\\\"title\\\": \\\"Title1\\\", \\\"body\\\": \\\"<p>Body1</p>\\\"}, \\\"id\\\": \\\"ba2832a9-f580-424f-bee8-f081a3eb7b86\\\"}]\", \"test_related_model\": [{\"pk\": 1, \"test_page\": 3, \"name\": \"Test\"}]}",
         "approved_go_live_at": null
     }
 }, {
@@ -65,7 +65,7 @@
         "submitted_for_moderation": false,
         "created_at": "2019-05-28T15:11:44.419Z",
         "user": 8,
-        "content_json": "{\"pk\": 4, \"path\": \"000100010001\", \"depth\": 3, \"numchild\": 0, \"title\": \"Test2\", \"draft_title\": \"Test2\", \"slug\": \"test2\", \"content_type\": 8, \"live\": false, \"has_unpublished_changes\": false, \"url_path\": \"/test1/test2/\", \"owner\": 8, \"seo_title\": \"\", \"show_in_menus\": false, \"search_description\": \"\", \"go_live_at\": null, \"expire_at\": null, \"expired\": false, \"locked\": false, \"first_published_at\": null, \"last_published_at\": null, \"latest_revision_created_at\": null, \"live_revision\": null, \"content_release\": null, \"name1\": \"Test2 name1\", \"name2\": \"Test2 name2\", \"body\": \"[{\\\"type\\\": \\\"dynamictestpage_block\\\", \\\"value\\\": 3, \\\"id\\\": \\\"d7a5efb5-c434-4ecd-9f98-2fb6591e46f9\\\"}]\", \"test_related_model\": [{\"pk\": 2, \"test_page\": 4, \"name\": \"Test2\"}]}",
+        "content_json": "{\"pk\": 4, \"path\": \"000100010001\", \"depth\": 3, \"numchild\": 0, \"title\": \"Test2\", \"draft_title\": \"Test2\", \"slug\": \"test2\", \"content_type\": [\"test_page\", \"testpage\"], \"live\": false, \"has_unpublished_changes\": false, \"url_path\": \"/test1/test2/\", \"owner\": 8, \"seo_title\": \"\", \"show_in_menus\": false, \"search_description\": \"\", \"go_live_at\": null, \"expire_at\": null, \"expired\": false, \"locked\": false, \"first_published_at\": null, \"last_published_at\": null, \"latest_revision_created_at\": null, \"live_revision\": null, \"content_release\": null, \"name1\": \"Test2 name1\", \"name2\": \"Test2 name2\", \"body\": \"[{\\\"type\\\": \\\"dynamictestpage_block\\\", \\\"value\\\": 3, \\\"id\\\": \\\"d7a5efb5-c434-4ecd-9f98-2fb6591e46f9\\\"}]\", \"test_related_model\": [{\"pk\": 2, \"test_page\": 4, \"name\": \"Test2\"}]}",
         "approved_go_live_at": null
     }
 }, {
@@ -78,7 +78,10 @@
         "title": "Root",
         "draft_title": "Root",
         "slug": "root",
-        "content_type": 1,
+        "content_type": [
+            "wagtailcore",
+            "page"
+        ],
         "live": true,
         "has_unpublished_changes": false,
         "url_path": "/",
@@ -105,7 +108,10 @@
         "title": "Test1",
         "draft_title": "Test1",
         "slug": "test1",
-        "content_type": 8,
+        "content_type": [
+            "test_page",
+            "testpage"
+        ],
         "live": true,
         "has_unpublished_changes": false,
         "url_path": "/test1/",
@@ -132,7 +138,10 @@
         "title": "Test2",
         "draft_title": "Test2",
         "slug": "test2",
-        "content_type": 8,
+        "content_type": [
+            "test_page",
+            "testpage"
+        ],
         "live": true,
         "has_unpublished_changes": false,
         "url_path": "/test1/test2/",
