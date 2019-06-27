@@ -15,4 +15,4 @@ django_extensions==2.1.3
 jsonschema==3.0.1
 
 # django-snapshotpublisher==0.3
-git+https://github.com/yohanlebret/django-snapshotpublisher#egg=django-snapshotpublisher
+git+https://github.com/nhsuk/django-snapshotpublisher#egg=django-snapshotpublisher

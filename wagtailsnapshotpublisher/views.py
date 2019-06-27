@@ -149,7 +149,7 @@ def preview_instance(request, content_app, content_class, content_id, preview_mo
     return JsonResponse(data)
 
 
-def compare_release(request, release_id, release_id_to_compare_to=None):
+def compare_release(request, release_id, release_id_to_compare_to=None, set_live_button=False):
     """ compare_release """
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
@@ -243,14 +243,14 @@ def compare_release(request, release_id, release_id_to_compare_to=None):
 
 
 def release_detail(request, release_id, set_live_button=False, release_id_to_compare_to=None):
-    details = compare_release(request, release_id, release_id_to_compare_to)
+    details = compare_release(request, release_id, release_id_to_compare_to, set_live_button)
     details.update({
         'set_live_button': set_live_button,
     })
     return render(request, 'wagtailadmin/release/detail.html', details)
 
 
-def release_set_live(request, release_id, publish_date=None):
+def release_set_live(request, release_id, publish_date=None, set_live_button=False):
     """ release_set_live """
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)

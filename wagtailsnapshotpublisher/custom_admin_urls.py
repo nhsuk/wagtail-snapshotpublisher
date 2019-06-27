@@ -31,7 +31,7 @@ urlpatterns = [
     path('wagtailsnapshotpublisher/wsspcontentrelease/setlive/<int:release_id>/',
          views.release_set_live, name='release_set_live'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/setlivedetails/<int:release_id>/',
-         views.release_set_live,
+         views.release_detail,
          {'set_live_button': True},
          name='release_set_live_detail',
      ),
