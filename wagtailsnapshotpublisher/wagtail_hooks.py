@@ -10,7 +10,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from wagtail.admin.action_menu import ActionMenuItem
 from wagtail.contrib.modeladmin.helpers import ButtonHelper
-from wagtail.contrib.modeladmin.options import ModelAdmin, modeladmin_register
+from wagtail.contrib.modeladmin.options import ModelAdmin, modeladmin_register, CreateView
 from wagtail.core import hooks
 
 from .models import WSSPContentRelease
@@ -90,6 +90,14 @@ class ReleaseButtonHelper(ButtonHelper):
         return self.create_button('unfreeze', 'Unfreeze', url, classnames_add, classnames_exclude)
 
 
+class ReleaseAdminCreateView(CreateView):
+
+    def form_valid(self, form, *args, **kwargs):
+        form.instance.author = self.request.user
+        form.save()
+        return super().form_valid(form, *args, **kwargs)
+
+
 class ReleaseAdmin(ModelAdmin):
     """ ReleaseAdmin """
     model = WSSPContentRelease
@@ -97,11 +105,12 @@ class ReleaseAdmin(ModelAdmin):
     menu_icon = 'date'
     menu_order = 900
 
-    list_display = ('site_code', 'title', 'uuid', 'status', 'publish_datetime', 'version')
+    list_display = ('site_code', 'title', 'uuid', 'status', 'publish_datetime', 'version', 'author')
     list_filter = ('status', 'site_code',)
     search_fields = ('title',)
     ordering = ('status', '-publish_datetime')
     index_view_extra_css = ('wagtailadmin/css/list-release.css',)
+    create_view_class = ReleaseAdminCreateView
 
     def get_extra_attrs_for_row(self, obj, context):
         """ get_extra_attrs_for_row """

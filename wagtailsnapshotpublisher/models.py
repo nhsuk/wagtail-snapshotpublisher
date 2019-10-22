@@ -8,6 +8,7 @@ import re
 from django import forms
 from django.apps import apps
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, Count, Min
@@ -43,6 +44,18 @@ VERSION_TYPES = (
 
 class WSSPContentRelease(ContentRelease):
     """ WSSPContentRelease """
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='release_author',
+    )
+    publisher = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='release_publisher',
+    )
     version_type = models.IntegerField(choices=VERSION_TYPES, default=1)
     restored = models.BooleanField(default=False)
 
@@ -76,6 +89,8 @@ class WSSPContentRelease(ContentRelease):
     panels_live_release = [
         MultiFieldPanel(
             [
+                ReadOnlyPanel('author'),
+                ReadOnlyPanel('publisher'),
                 ReadOnlyPanel('site_code'),
                 ReadOnlyPanel('uuid'),
                 ReadOnlyPanel('get_status_display', heading='Status'),

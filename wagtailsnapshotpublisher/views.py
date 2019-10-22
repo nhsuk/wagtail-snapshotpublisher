@@ -256,6 +256,11 @@ def release_set_live(request, release_id, publish_date=None, set_live_button=Fal
     release = WSSPContentRelease.objects.get(id=release_id)
     response = None
 
+    # save publisher user in release
+    if request:
+        release.publisher = request.user
+        release.save()
+
     if publish_date:
         response = publisher_api.freeze_content_release(release.site_code, release.uuid,
                                                         publish_date)
