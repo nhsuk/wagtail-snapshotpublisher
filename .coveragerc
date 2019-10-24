@@ -1,6 +1,5 @@
 [run]
 omit =
-    ./wagtailsnapshotpublisher/tests.py
     ./wagtailsnapshotpublisher/migrations/*
     ./wagtailsnapshotpublisher/panels.py
 source = wagtailsnapshotpublisher
