@@ -277,8 +277,17 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
 
 def release_set_live(request, release_id, publish_datetime=None, set_live_button=False):
     """ release_set_live """
-    if request.POST.get('publish_datetime'):
-        publish_datetime = datetime.strptime(request.POST.get('publish_datetime'), DATETIME_FORMAT).replace(tzinfo=timezone.utc).isoformat()
+    if not publish_datetime:
+        if request and request.POST:
+            form = PublishReleaseForm(request.POST)
+            if form.is_valid():
+                if form.cleaned_data['publish_type'] == 'now':
+                    # Will publish immediately.
+                    publish_datetime = None
+                else:
+                    publish_datetime = form.cleaned_data['publish_datetime']
+            else:
+                logger.debug('Set live form is invalid')
 
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
