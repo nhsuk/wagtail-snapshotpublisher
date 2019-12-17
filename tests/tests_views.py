@@ -520,7 +520,7 @@ class WagtailSnapshotPublisherViewTests(TestCase):
             release_set_live(
                 None,
                 self.content_release.id,
-                publish_datetime.strftime(DATETIME_FORMAT),
+                publish_datetime,
             )
             self.assertFail('''A Http404 exception haven't been raise''')
         except Http404:
@@ -535,14 +535,14 @@ class WagtailSnapshotPublisherViewTests(TestCase):
         release_set_live(
             None,
             self.content_release.id,
-            publish_datetime.strftime(DATETIME_FORMAT),
+            publish_datetime,
         )
 
         self.content_release = WSSPContentRelease.objects.get(id=1)
         self.assertEqual(self.content_release.status, 1)
         self.assertEqual(
             self.content_release.publish_datetime,
-            publish_datetime.replace(microsecond=0),
+            publish_datetime,
         )
 
     def test_release_archive(self):

@@ -3,6 +3,8 @@
 """
 
 import json
+import logging
+from datetime import datetime
 
 from django.apps import apps
 from django.conf import settings
@@ -10,6 +12,8 @@ from django.forms.models import modelform_factory
 from django.http import JsonResponse, HttpResponseServerError, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
+from django.core import serializers
 
 from wagtail.core.models import Page, PageRevision
 
@@ -18,6 +22,27 @@ from djangosnapshotpublisher.publisher_api import PublisherAPI
 from .models import WSSPContentRelease, document_load_dynamic_elements
 from .forms import PublishReleaseForm, FrozenReleasesForm
 from .utils import get_dynamic_element_keys
+
+logger = logging.getLogger('django')
+
+DATETIME_FORMAT='%Y-%m-%d %H:%M'
+
+#
+# Return upcoming scheduled releases.
+#
+def get_releases(request, site_code):
+    """ get_releases """
+    time_now = timezone.now()
+    logger.info('Getting releases for site code %s after %s', site_code, time_now.strftime(DATETIME_FORMAT))
+    publisher_api = PublisherAPI()
+    response = publisher_api.list_content_releases(site_code, 1, time_now) # Status FROZEN = 1
+
+    if response['status'] == 'success':
+        releases = list(response['content'].values())
+    else:
+        return response
+
+    return JsonResponse(releases, safe=False)
 
 
 def get_content_details(site_code, release_uuid, content_type, content_key):
@@ -250,8 +275,20 @@ def release_detail(request, release_id, set_live_button=False, release_id_to_com
     return render(request, 'wagtailadmin/release/detail.html', details)
 
 
-def release_set_live(request, release_id, publish_date=None, set_live_button=False):
+def release_set_live(request, release_id, publish_datetime=None, set_live_button=False):
     """ release_set_live """
+    if not publish_datetime:
+        if request and request.POST:
+            form = PublishReleaseForm(request.POST)
+            if form.is_valid():
+                if form.cleaned_data['publish_type'] == 'now':
+                    # Will publish immediately.
+                    publish_datetime = None
+                else:
+                    publish_datetime = form.cleaned_data['publish_datetime']
+            else:
+                logger.debug('Set live form is invalid')
+
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
     response = None
@@ -261,10 +298,12 @@ def release_set_live(request, release_id, publish_date=None, set_live_button=Fal
         release.publisher = request.user
         release.save()
 
-    if publish_date:
+    if publish_datetime:
+        logger.info('Setting release %s live at %s', release.uuid, publish_datetime)
         response = publisher_api.freeze_content_release(release.site_code, release.uuid,
-                                                        publish_date)
+                                                        publish_datetime)
     else:
+        logger.info('Setting release %s live immediately', release.uuid)
         response = publisher_api.set_live_content_release(release.site_code, release.uuid)
 
     if response['status'] != 'success':
