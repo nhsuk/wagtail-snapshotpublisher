@@ -14,10 +14,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.core import serializers
+from django.db.models import Q
 
 from wagtail.core.models import Page, PageRevision
 
 from djangosnapshotpublisher.publisher_api import PublisherAPI
+from djangosnapshotpublisher.models import ContentRelease
 
 from .models import WSSPContentRelease, document_load_dynamic_elements
 from .forms import PublishReleaseForm, FrozenReleasesForm
@@ -35,14 +37,29 @@ def get_releases(request, site_code):
     time_now = timezone.now()
     logger.info('Getting releases for site code %s after %s', site_code, time_now.strftime(DATETIME_FORMAT))
     publisher_api = PublisherAPI()
-    response = publisher_api.list_content_releases(site_code, 1, time_now) # Status FROZEN = 1
+    response = list_live_and_upcoming_content_releases(site_code, 1, time_now) # Status FROZEN = 1
 
     if response['status'] == 'success':
-        releases = list(response['content'].values())
+        releases = list(response['content'].values('uuid', 'title', 'publish_datetime', 'is_live'))
+        logger.info('Releases are %s', releases)
     else:
         return response
 
     return JsonResponse(releases, safe=False)
+
+
+def list_live_and_upcoming_content_releases(site_code, status=None, after=None):
+    """ list_content_releases """
+    try:
+        content_releases = ContentRelease.objects.filter(site_code=site_code)
+        if status:
+            content_releases = content_releases.filter(status=status)
+        if after:
+            content_releases = content_releases.filter(Q(publish_datetime__gte=after) | Q(is_live=True))
+
+        return { 'status': 'success', 'content': content_releases }
+    except:
+        return { 'status': 'failed', 'content': 'Unable to fetch upcoming content releases' }
 
 
 def get_content_details(site_code, release_uuid, content_type, content_key):

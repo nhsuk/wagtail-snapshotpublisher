@@ -13,7 +13,7 @@ from django.test import Client, TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
 
-from djangosnapshotpublisher.models import ReleaseDocument
+from djangosnapshotpublisher.models import ReleaseDocument, ContentRelease
 from djangosnapshotpublisher.publisher_api import PublisherAPI, DATETIME_FORMAT
 
 from wagtailsnapshotpublisher.models import WSSPContentRelease
@@ -740,3 +740,52 @@ class WagtailSnapshotPublisherViewTests(TestCase):
     # def test_preview_instance(self):
     #     """ test_preview_instance """
     #     # preview_instance(request, content_app, content_class, content_id, preview_mode='default', load_dynamic_element=True)
+
+    # @transaction.atomic
+    def test_get_releases(self):
+        """ test_get_releases """
+        self.page1.content_release = self.content_release
+        self.page1.save_revision(self.user)
+
+        site_code = self.content_release.site_code
+        release_uuid = self.content_release.uuid
+        # print('Release site code is', site_code, release_uuid)
+        url = reverse('wagtailsnapshotpublisher_api:site_releases', kwargs={
+            'site_code': site_code,
+        })
+
+        #  No live or upcoming ContentReleases
+        response = self.publisher_api.add_content_release(site_code, 'title1', '0.0.1')
+        request = self.factory.post(url)
+        request.user = self.user
+        view_response = get_releases(request, site_code)
+        self.assertEqual(view_response.status_code, 200)
+        self.assertEqual(json.loads(view_response.content), [])
+
+        #  No live and one upcoming ContentRelease
+        response = self.publisher_api.add_content_release(site_code, 'title2', '0.0.2')
+        content_release = response['content']
+        publish_time = timezone.now() + timezone.timedelta(minutes=10)
+        response = self.publisher_api.freeze_content_release(site_code, content_release.uuid, publish_time)
+        request = self.factory.post(url)
+        request.user = self.user
+        view_response = get_releases(request, site_code)
+        self.assertEqual(view_response.status_code, 200)
+        content = json.loads(view_response.content)
+        self.assertEqual(len(content), 1)
+        self.assertEqual(content[0]['uuid'], str(content_release.uuid))
+
+        #  One live and one upcoming ContentRelease
+        response = self.publisher_api.add_content_release(site_code, 'title3', '0.0.3')
+        content_release = response['content']
+        response = self.publisher_api.set_live_content_release(site_code, content_release.uuid)
+        # Force is_live flag to be calculated
+        ContentRelease.objects.live(site_code)
+        request = self.factory.post(url)
+        request.user = self.user
+        view_response = get_releases(request, site_code)
+        content = json.loads(view_response.content)
+        self.assertEqual(len(content), 2)
+        self.assertEqual(content[0]['uuid'], str(content_release.uuid))
+
+
