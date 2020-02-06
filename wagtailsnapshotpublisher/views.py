@@ -19,6 +19,7 @@ from django.db.models import Q
 from wagtail.core.models import Page, PageRevision
 
 from djangosnapshotpublisher.publisher_api import PublisherAPI
+from djangosnapshotpublisher.models import ContentRelease
 
 from .models import WSSPContentRelease, document_load_dynamic_elements
 from .forms import PublishReleaseForm, FrozenReleasesForm
@@ -50,7 +51,7 @@ def get_releases(request, site_code):
 def list_live_and_upcoming_content_releases(site_code, status=None, after=None):
     """ list_content_releases """
     try:
-        content_releases = WSSPContentRelease.objects.filter(site_code=site_code)
+        content_releases = ContentRelease.objects.filter(site_code=site_code)
         if status:
             content_releases = content_releases.filter(status=status)
         if after:
