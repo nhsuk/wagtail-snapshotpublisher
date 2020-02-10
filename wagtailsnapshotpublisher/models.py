@@ -5,7 +5,8 @@
 import json
 import re
 
-from django import forms
+from django import forms, dispatch
+
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -27,7 +28,7 @@ from djangosnapshotpublisher.publisher_api import PublisherAPI
 
 from .panels import ReadOnlyPanel
 from .utils import get_from_dict, set_in_dict, del_in_dict, get_dynamic_element_keys
-
+from .signals import content_was_published
 
 site_code_widget = None
 
@@ -330,16 +331,19 @@ class WithRelease(models.Model):
             })
 
             publisher_api = PublisherAPI()
+            json_data = json.dumps(data)
             response = publisher_api.publish_document_to_content_release(
                 content_release.site_code,
                 content_release.uuid,
-                json.dumps(data),
+                json_data,
                 serializer_item['key'],
                 serializer_item['type'],
                 extra_parameters,
             )
 
-            if response['status'] != 'success':
+            if response['status'] == 'success':
+                content_was_published.send(sender=self.__class__, site_id=content_release.site_code, release_id=content_release.uuid, title=data.get("title"), content=json_data)
+            else:
                 raise Exception(response['error_msg'])
 
 
