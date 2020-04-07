@@ -213,12 +213,14 @@ def remove_submit_to_moderator_option(menu_items, request, context):
     """ remove_submit_to_moderator_option """
     if context['view'] == 'create':
         menu_items[:] = [item for item in menu_items if item.name and \
-            item.name.startswith('wssp-action')]
+            (item.name.startswith('wssp-action') or item.name == 'action-save-draft')]
 
     if context['view'] == 'edit' and 'page' in context and \
             hasattr(context['page'], 'content_release'):
         if hasattr(context['page'].__class__, 'release_config'):
             items = []
+            for item in menu_items:
+                if (item.name == 'action-save-draft'): items.append(item)
             if 'can_publish_to_release' in context['page'].__class__.release_config and \
                     context['page'].__class__.release_config['can_publish_to_release']:
                 items += [item for item in menu_items if item.name and \
@@ -228,6 +230,7 @@ def remove_submit_to_moderator_option(menu_items, request, context):
                 items += [item for item in menu_items if item.name and \
                     item.name.startswith('wssp-actionliverelease-')]
             menu_items[:] = items
+
 
 
 @hooks.register('insert_editor_js')
