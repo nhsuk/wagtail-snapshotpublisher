@@ -4,6 +4,7 @@
 
 import json
 import re
+import logging
 
 from django import forms, dispatch
 
@@ -29,6 +30,8 @@ from djangosnapshotpublisher.publisher_api import PublisherAPI
 from .panels import ReadOnlyPanel
 from .utils import get_from_dict, set_in_dict, del_in_dict, get_dynamic_element_keys
 from .signals import content_was_published
+
+logger = logging.getLogger('django')
 
 site_code_widget = None
 
@@ -305,6 +308,7 @@ class WithRelease(models.Model):
         raise ValueError(_('get_serializers is not define'))
 
     def publish_to_release(self, instance=None, content_release=None, extra_parameters={}):
+        logger.info('DEBUG: starting publish to release')
         """ publish_to_release """
         if not instance:
             instance = self
@@ -330,6 +334,8 @@ class WithRelease(models.Model):
                 'have_dynamic_elements': have_dynamic_elements,
             })
 
+            logger.info('DEBUG: Starting request to publisher API ')
+
             publisher_api = PublisherAPI()
             json_data = json.dumps(data)
             response = publisher_api.publish_document_to_content_release(
@@ -341,8 +347,11 @@ class WithRelease(models.Model):
                 extra_parameters,
             )
 
+            logger.info('DEBUG: Return from publisher API ')
+
             if response['status'] == 'success':
-                content_was_published.send(sender=self.__class__, site_id=content_release.site_code, release_id=content_release.uuid, title=data.get("title"), content=json_data)
+                logger.info('DEBUG: Publisher API response was a success')
+                content_was_published.send(sender=self.__class__, site_id=content_release.site_code, release_id=content_release.uuid, title=data.get("title"), content=json_data, page=self)
             else:
                 raise Exception(response['error_msg'])
 
