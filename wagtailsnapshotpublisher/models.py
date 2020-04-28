@@ -342,7 +342,7 @@ class WithRelease(models.Model):
             )
 
             if response['status'] == 'success':
-                content_was_published.send(sender=self.__class__, site_id=content_release.site_code, release_id=content_release.uuid, title=data.get("title"), content=json_data)
+                content_was_published.send(sender=self.__class__, site_id=content_release.site_code, release_id=content_release.uuid, title=data.get("title"), content=json_data, page=self)
             else:
                 raise Exception(response['error_msg'])
 
