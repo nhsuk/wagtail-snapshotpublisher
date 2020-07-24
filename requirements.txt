@@ -1,11 +1,11 @@
 Django>=2.2.0
-# psycopg2==2.8.2
+psycopg2
 wagtail>=2.8,<2.9
 python-crontab
 # wagtailmedia
 django-cors-headers
 django-storages
-azure
+azure==4.0
 coverage
 gunicorn
 flake8
