@@ -94,12 +94,19 @@ def get_content_details(site_code, release_uuid, content_type, content_key):
 
     if response['status'] == 'success':
         data = json.loads(response['content'].document_json)
-        dynamic_element_keys = get_dynamic_element_keys(data)
-        if dynamic_element_keys:
-            data.update({
-                'dynamic_element_keys': dynamic_element_keys,
-            })
-            data, updated = document_load_dynamic_elements(content_release, data)
+
+        response_extra = publisher_api.get_document_extra_from_content_release(
+            site_code,
+            release_uuid,
+            content_key,
+            content_type,
+        )
+        if response_extra['status'] == 'success':
+            try:
+                dynamic_element_keys = json.loads(response_extra['content'].get(key='dynamic_element_keys').content)
+                data, updated = document_load_dynamic_elements(content_release, data, dynamic_element_keys)
+            except:
+                pass
     else:
         return response
 
@@ -161,10 +168,7 @@ def preview_model(request, content_app, content_class, content_id, preview_mode=
         if load_dynamic_element:
             dynamic_element_keys = get_dynamic_element_keys(data)
             if dynamic_element_keys:
-                data.update({
-                    'dynamic_element_keys': dynamic_element_keys,
-                })
-                data, updated = document_load_dynamic_elements(instance.live_release, data)
+                data, updated = document_load_dynamic_elements(instance.live_release, data, dynamic_element_keys)
         return JsonResponse(data)
     else:
         if not settings.TESTING:
@@ -184,10 +188,7 @@ def preview_instance(request, content_app, content_class, content_id, preview_mo
     if load_dynamic_element:
         dynamic_element_keys = get_dynamic_element_keys(data)
         if dynamic_element_keys:
-            data.update({
-                'dynamic_element_keys': dynamic_element_keys,
-            })
-            data, updated = document_load_dynamic_elements(instance.live_release, data)
+            data, updated = document_load_dynamic_elements(instance.live_release, data, dynamic_element_keys)
     return JsonResponse(data)
 
 

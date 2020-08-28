@@ -78,11 +78,13 @@ class DynamicTestPageBlock(blocks.PageChooserBlock):
     def get_api_representation(self, value, context=None):
         """ get_api_representation """
         return {
-            'id': value.id,
-            'serializer': 'cover',
-            'dynamic': True,
-            'app': value.__class__._meta.app_label,
-            'class': value.__class__._meta.object_name,
+            'ref': {
+                'id': value.id,
+                'serializer': 'cover',
+                'dynamic': True,
+                'app': value.__class__._meta.app_label,
+                'class': value.__class__._meta.object_name,
+            }
         }
 
 

@@ -23,7 +23,7 @@ from django.utils.translation import gettext_lazy as _
 from wagtail.admin.edit_handlers import FieldPanel, MultiFieldPanel, HelpPanel
 from wagtail.core.models import Page, PageRevision
 
-from djangosnapshotpublisher.models import ContentRelease
+from djangosnapshotpublisher.models import ContentRelease, ReleaseDocument
 from djangosnapshotpublisher.publisher_api import PublisherAPI
 
 from .panels import ReadOnlyPanel
@@ -135,6 +135,74 @@ class WSSPContentRelease(ContentRelease):
                 return cls.get_panel_field_from_panels(item.children, field_name)
         return None
 
+    def copy_document_release_ref_from_baserelease(self):
+        """ get parent release """
+        base_release = self.base_release
+        if self.use_current_live_as_base_release:
+            base_release = self.__class__.objects.filter(
+                publish_datetime__lt=self.publish_datetime, site_code=self.site_code).order_by(
+                    '-publish_datetime').first()
+
+        if base_release:
+            publisher_api = PublisherAPI()
+            dynamic_documents = base_release.release_documents.filter(
+                parameters__key='have_dynamic_elements',
+                parameters__content='True',
+            )
+
+            for dynamic_document in dynamic_documents:
+                dynamic_element_keys = None
+                try:
+                    self.release_documents.get(
+                        document_key=dynamic_document.document_key,
+                        content_type=dynamic_document.content_type,
+                    )
+                except ReleaseDocument.DoesNotExist:
+                    add_document_to_release = False
+                    dynamic_element_keys = json.loads(dynamic_document.parameters.get(key='dynamic_element_keys').content)
+                    content = json.loads(dynamic_document.document_json)
+
+                    for elt_list in dynamic_element_keys:
+                        item = get_from_dict(content, elt_list)
+                    
+                        elements_to_remove = []
+
+                        # try:
+                        model = apps.get_model(item['app'], item['class'])
+                        loaded_instance = model.objects.get(id=item['id'])
+                        item_serializer = loaded_instance.get_serializers()[item['serializer']]
+
+                        if self.release_documents.filter(document_key=item_serializer['key'], content_type=item_serializer['type']).exists():
+                            add_document_to_release = True
+                            break
+
+                    # load dynamic content
+                    data, updated = document_load_dynamic_elements(self, json.loads(dynamic_document.document_json), dynamic_element_keys)
+ 
+                    # get extra paramaters
+                    parameters = None
+                    response = publisher_api.get_document_extra_from_content_release(
+                        self.site_code,
+                        base_release.uuid,
+                        dynamic_document.document_key,
+                        dynamic_document.content_type,
+                    )
+                    if response['status'] == 'success':
+                        parameters = {parameter.key: parameter.content for parameter in response['content']}
+
+                    # add content to release
+                    publisher_api.publish_document_to_content_release(
+                        self.site_code,
+                        self.uuid,
+                        json.dumps(data),
+                        dynamic_document.document_key,
+                        dynamic_document.content_type,
+                        parameters=parameters,
+                    )                    
+
+        super(WSSPContentRelease, self).copy_document_release_ref_from_baserelease()
+
+
 
 @receiver(pre_save, sender=WSSPContentRelease)
 def define_version(sender, instance, *args, **kwargs):
@@ -213,57 +281,61 @@ def fix_versions_conflict(sender, instance, *args, **kwargs):
 def load_dynamic_element(sender, instance, *args, **kwargs):
     """ load_dynamic_element """
     if instance.is_live:
+        publisher_api = PublisherAPI()
+
         # get all ReleaseContent with dynamic element
         release_documents = instance.release_documents.filter(
             parameters__key='have_dynamic_elements',
-            parameters__content=True,
+            parameters__content='True',
+            content_type='page',
         )
 
         for release_document in release_documents:
-            content, updated = document_load_dynamic_elements(
-                instance,
-                json.loads(release_document.document_json)
+            response_extra = publisher_api.get_document_extra_from_content_release(
+                instance.site_code,
+                instance.uuid,
+                release_document.document_key,
+                release_document.content_type,
             )
-            if updated:
-                release_document.document_json = json.dumps(content)
-                release_document.save()
+            if response_extra['status'] == 'success' and not release_document.deleted:
+                data = json.loads(release_document.document_json)
+                dynamic_element_keys = json.loads(response_extra['content'].get(key='dynamic_element_keys').content)
+                data, updated = document_load_dynamic_elements(instance, data, dynamic_element_keys)
+                if updated:
+                    release_document.document_json = json.dumps(data)
+                    release_document.save()
 
 
-def document_load_dynamic_elements(content_release, content):
+def document_load_dynamic_elements(content_release, content, dynamic_element_keys):
     """ document_load_dynamic_elements """
     updated = False
+    elements_to_remove = []
 
-    if 'dynamic_element_keys' in content:
-        elements_to_remove = []
+    for elt_list in dynamic_element_keys:
+        item = get_from_dict(content, elt_list)
 
-        for elt_list in content['dynamic_element_keys']:
-            item = get_from_dict(content, elt_list)
+        try:
+            model = apps.get_model(item['app'], item['class'])
+            loaded_instance = model.objects.get(id=item['id'])
+            item_serializer = loaded_instance.get_serializers()[item['serializer']]
 
-            try:
-                model = apps.get_model(item['app'], item['class'])
-                loaded_instance = model.objects.get(id=item['id'])
-                item_serializer = loaded_instance.get_serializers()[item['serializer']]
+            publisher_api = PublisherAPI()
+            response = publisher_api.get_document_from_content_release(
+                content_release.site_code,
+                content_release.uuid,
+                item_serializer['key'],
+                item_serializer['type'],
+            )
 
-                publisher_api = PublisherAPI()
-                response = publisher_api.get_document_from_content_release(
-                    content_release.site_code,
-                    content_release.uuid,
-                    item_serializer['key'],
-                    item_serializer['type'],
-                )
-
-                if response['status'] == 'success':
-                    set_in_dict(content, elt_list, json.loads(response['content'].document_json))
-                else:
-                    raise Exception(response['error_msg'])
-            except:
-                elements_to_remove.append(elt_list[:-1])
-
-        #save document with loaded dynamic content
-        for element_to_remove in elements_to_remove[::-1]:
-            del_in_dict(content, element_to_remove)
-        del content['dynamic_element_keys']
-        updated = True
+            if response['status'] == 'success':
+                elt_list = elt_list[:-1]
+                elt_list.append('data')
+                set_in_dict(content, elt_list, json.loads(response['content'].document_json))
+            else:
+                raise Exception(response['error_msg'])
+        except:
+            elements_to_remove.append(elt_list[:-1])
+    updated = True
 
     return content, updated
 
@@ -287,8 +359,9 @@ class WithRelease(models.Model):
     @property
     def live_release(self):
         """ live_release """
-        if self.content_release:
-            return WSSPContentRelease.objects.live(site_code=self.content_release.site_code)
+        site_code = self.site_code if hasattr(self, 'site_code') else site_code
+        if site_code is not None:
+            return WSSPContentRelease.objects.live(site_code=site_code)
         return None
 
     def get_key(self):
@@ -321,8 +394,8 @@ class WithRelease(models.Model):
 
             dynamic_element_keys = get_dynamic_element_keys(data)
             if dynamic_element_keys:
-                data.update({
-                    'dynamic_element_keys': dynamic_element_keys,
+                extra_parameters.update({
+                    'dynamic_element_keys': json.dumps(dynamic_element_keys),
                 })
                 have_dynamic_elements = True
 
@@ -367,15 +440,14 @@ class WithRelease(models.Model):
                 'document_key': serializer_item['key'],
                 'content_type': serializer_item['type'],
             }
-
             response = None
             if delete:
                 response = publisher_api.delete_document_from_content_release(**paramaters)
             else:
                 response = publisher_api.unpublish_document_from_content_release(**paramaters)
-
             if response['status'] != 'success':
                 raise Exception(response['error_msg'])
+        return response
 
 
 class ModelWithRelease(WithRelease):
@@ -456,14 +528,6 @@ class PageWithRelease(Page, WithRelease):
         mode_name = mode_name if mode_name else 'default'
         serialized_page = serializers[mode_name]['class'](instance=self)
         data = serialized_page.data
-
-        if load_dynamic_element:
-            dynamic_element_keys = get_dynamic_element_keys(data)
-            if dynamic_element_keys and len(dynamic_element_keys) > 0:
-                data.update({
-                    'dynamic_element_keys': dynamic_element_keys,
-                })
-                data, updated = document_load_dynamic_elements(self.live_release, data)
         return JsonResponse(data)
 
     def save_revision(self, user=None, submitted_for_moderation=False, approved_go_live_at=None,
