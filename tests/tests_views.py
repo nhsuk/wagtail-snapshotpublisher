@@ -103,9 +103,30 @@ class WagtailSnapshotPublisherViewTests(TestCase):
                     'type': 'dynamictestpage_block',
                     'id': '4b6285fb-3fa1-4f9d-9b35-7250b28f81f8',
                     'value': {
-                        'title': 'Test1',
-                        'name1': 'Name1',
+                        'ref': {
+                            'id': 3,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage',
+                        },
+                        'data': {
+                            'title': 'Test1',
+                            'name1': 'Name1',
+                        }
                     },
+                }, {
+                    'type': 'dynamictestpage_block',
+                    'id': '26ab3837-c224-4b28-bd29-24e0b38c0981',
+                    'value': {
+                        'ref': {
+                            'id': 4,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        }
+                    }
                 }
             ],
         })
@@ -196,7 +217,31 @@ class WagtailSnapshotPublisherViewTests(TestCase):
                 }, {
                     'type': 'dynamictestpage_block',
                     'id': '4b6285fb-3fa1-4f9d-9b35-7250b28f81f8',
-                    'value': {'title': 'Test1', 'name1': 'Name1'}
+                    'value': {
+                        'ref': {
+                            'id': 3,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        },
+                        'data': {
+                            'title': 'Test1',
+                            'name1': 'Name1'
+                        }
+                    }
+                }, {
+                    'type': 'dynamictestpage_block',
+                    'id': '26ab3837-c224-4b28-bd29-24e0b38c0981',
+                    'value': {
+                        'ref': {
+                            'id': 4,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        }
+                    },
                 }
             ],
         })
@@ -248,8 +293,32 @@ class WagtailSnapshotPublisherViewTests(TestCase):
                         'title': 'Title1',
                         'body': '<p>Body1</p>',
                     },
-                },
-            ],
+                }, {
+                    'type': 'dynamictestpage_block',
+                    'id': '4b6285fb-3fa1-4f9d-9b35-7250b28f81f8',
+                    'value': {
+                        'ref': {
+                            'id': 3,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        }
+                    }
+                }, {
+                    'type': 'dynamictestpage_block',
+                    'id': '26ab3837-c224-4b28-bd29-24e0b38c0981',
+                    'value': {
+                        'ref': {
+                            'id': 4,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        }
+                    }
+                }
+            ]
         })
 
     def test_preview_instance_default_with_dynamic_elements(self):
@@ -302,15 +371,33 @@ class WagtailSnapshotPublisherViewTests(TestCase):
                     'type': 'dynamictestpage_block',
                     'id': '4b6285fb-3fa1-4f9d-9b35-7250b28f81f8',
                     'value': {
-                        'title': 'Test Preview',
-                        'name1': 'Name1 Preview'
+                        'ref': {
+                            'id': 3,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        },
+                        'data': {
+                            'title': 'Test Preview',
+                            'name1': 'Name1 Preview'
+                        }
                     },
                 }, {
                     'type': 'dynamictestpage_block',
                     'id': '26ab3837-c224-4b28-bd29-24e0b38c0981',
                     'value': {
-                        'title': 'Test2',
-                        'name1': 'Test2 name1'
+                        'ref': {
+                            'id': 4,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        },
+                        'data': {
+                            'title': 'Test2',
+                            'name1': 'Test2 name1'
+                        }
                     },
                 }
             ],
@@ -338,21 +425,25 @@ class WagtailSnapshotPublisherViewTests(TestCase):
                     'type': 'dynamictestpage_block',
                     'id': '4b6285fb-3fa1-4f9d-9b35-7250b28f81f8',
                     'value': {
-                        'id': 3,
-                        'serializer': 'cover',
-                        'dynamic': True,
-                        'app': 'test_page',
-                        'class': 'TestPage'
+                        'ref': {
+                            'id': 3,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        }
                     },
                 }, {
                     'type': 'dynamictestpage_block',
                     'id': '26ab3837-c224-4b28-bd29-24e0b38c0981',
                     'value': {
-                        'id': 4,
-                        'serializer': 'cover',
-                        'dynamic': True,
-                        'app': 'test_page',
-                        'class': 'TestPage'
+                        'ref': {
+                            'id': 4,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        }
                     },
                 }
             ],
@@ -376,19 +467,58 @@ class WagtailSnapshotPublisherViewTests(TestCase):
                     'type': 'dynamictestpage_block',
                     'id': '4b6285fb-3fa1-4f9d-9b35-7250b28f81f8',
                     'value': {
-                        'title': 'Test Preview',
-                        'name1': 'Name1 Preview'
+                        'ref': {
+                            'id': 3,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        }
                     },
                 }, {
                     'type': 'dynamictestpage_block',
                     'id': '26ab3837-c224-4b28-bd29-24e0b38c0981',
                     'value': {
-                        'title': 'Test2',
-                        'name1': 'Test2 name1'
+                        'ref': {
+                            'id': 4,
+                            'serializer': 'cover',
+                            'dynamic': True,
+                            'app': 'test_page',
+                            'class': 'TestPage'
+                        }
                     },
                 }
             ],
         })
+        # self.assertEqual(json.loads(preview_with_dynamic_elements_view.content), {
+        #     'title': 'Test Preview',
+        #     'name1': 'Name1 Preview',
+        #     'test_related_model': [1],
+        #     'body': [
+        #         {
+        #             'type': 'simple_richtext',
+        #             'id': 'ba2832a9-f580-424f-bee8-f081a3eb7b86',
+        #             'value': {
+        #                 'title': 'Title1',
+        #                 'body': '<p>Body1</p>',
+        #             },
+        #         }, {
+        #             'type': 'dynamictestpage_block',
+        #             'id': '4b6285fb-3fa1-4f9d-9b35-7250b28f81f8',
+        #             'value': {
+        #                 'title': 'Test Preview',
+        #                 'name1': 'Name1 Preview'
+        #             },
+        #         }, {
+        #             'type': 'dynamictestpage_block',
+        #             'id': '26ab3837-c224-4b28-bd29-24e0b38c0981',
+        #             'value': {
+        #                 'title': 'Test2',
+        #                 'name1': 'Test2 name1'
+        #             },
+        #         }
+        #     ],
+        # })
 
     def test_preview_instance_cover(self):
         """ test_preview_instance """
@@ -661,8 +791,17 @@ class WagtailSnapshotPublisherViewTests(TestCase):
                 'type': 'dynamictestpage_block',
                 'id': 'e0389402-bac7-4189-a1c7-8c76cb5467ed',
                 'value': {
-                    'title': 'Test1',
-                    'name1': 'Name1'
+                    'ref': {
+                        'id': 3,
+                        'serializer': 'cover',
+                        'dynamic': True,
+                        'app': 'test_page',
+                        'class': 'TestPage'
+                    },
+                    'data': {
+                        'title': 'Test1',
+                        'name1': 'Name1',
+                    }
                 },
             }],
             'redirects': []
@@ -749,7 +888,6 @@ class WagtailSnapshotPublisherViewTests(TestCase):
 
         site_code = self.content_release.site_code
         release_uuid = self.content_release.uuid
-        # print('Release site code is', site_code, release_uuid)
         url = reverse('wagtailsnapshotpublisher_api:site_releases', kwargs={
             'site_code': site_code,
         })
