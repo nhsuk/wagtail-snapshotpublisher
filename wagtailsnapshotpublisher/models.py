@@ -531,13 +531,13 @@ class PageWithRelease(Page, WithRelease):
         return JsonResponse(data)
 
     def save_revision(self, user=None, submitted_for_moderation=False, approved_go_live_at=None,
-                      changed=True):
+                      changed=True, log_action=False, previous_revision=None):
         """ save_revision """
         assigned_release = self.content_release
         self.content_release = None
 
         revision = super(PageWithRelease, self).save_revision(
-            user, submitted_for_moderation, approved_go_live_at, changed)
+            user, submitted_for_moderation, approved_go_live_at, changed, log_action=False, previous_revision=previous_revision)
         revision.publish()
 
         if assigned_release:
