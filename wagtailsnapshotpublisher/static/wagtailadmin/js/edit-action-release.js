@@ -88,7 +88,7 @@ $(function() {
         releasePopUp.append('<button class="cancel-btn button no">Close</button>');
 
         //show popup
-        $(`input[name="${id}"]`).click(function (e) {
+        $(`button[name="${id}"]`).click(function (e) {
             if(show_release_dropdown) {
                 if(siteCode == '__all__') {
                     releaseFiltering(`id_content_release_${action}`, false);
