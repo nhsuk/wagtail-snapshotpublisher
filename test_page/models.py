@@ -38,6 +38,11 @@ class SiteSettings(ModelWithRelease):
         FieldPanel('site'),
     ]
 
+    release_config = {
+        'can_publish_to_release': True,
+        'can_publish_to_live_release': False,
+    }
+
     def __str__(self):
         """ __str__ """
         return self.title
@@ -47,6 +52,23 @@ class SiteSettings(ModelWithRelease):
         if not self.slug:
             self.slug = slugify(self.title)
         super(SiteSettings, self).save()
+    
+    def get_serializers(self):
+        """ get_serializers """
+        from .serializers import SiteSettingsSerializer
+        return {
+            'default': {
+                'key': self.get_key(),
+                'type': self.get_name_slug(),
+                'class': SiteSettingsSerializer,
+            },
+        }
+
+    def get_key(self):
+        return 'site_settings'
+
+    def get_name_slug(self):
+        return 'site_settings'
 
 
 class SimpleRichText(blocks.StructBlock):

@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from wagtail.api.v2.serializers import StreamField
 
-from .models import TestPage, TestModel
+from .models import TestPage, TestModel, SiteSettings
 
 
 class TestPageSerializer(serializers.ModelSerializer):
@@ -63,4 +63,14 @@ class TestModelCoverSerializer(serializers.ModelSerializer):
         model = TestModel
         fields = (
             'name1',
+        )
+
+
+class SiteSettingsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = SiteSettings
+        fields = (
+            'slug',
+            'title',
         )

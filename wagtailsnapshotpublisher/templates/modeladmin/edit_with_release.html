@@ -10,20 +10,20 @@
         <div class="dropdown-toggle icon icon-arrow-up"></div>
         <ul role="menu">
             {% if user_can_delete %}<li><a href="{{ view.delete_url }}" class="shortcut">{% trans "Delete" %}</a></li>{% endif %}
-            
+
             {% if 'content_release' in form.fields %}
                 {% if instance.release_config.can_publish_to_live_release %}
                     <li>
-                        <input type="submit" name="wssp-actionliverelease-publish-live-release" value="{% trans "Publish Directly To Release" %}" class="button">
+                        <button type="submit" name="wssp-actionliverelease-publish-live-release" class="button">{% trans "Publish Directly To Release" %}</button>
                     </li>
                 {% endif %}
 
                 {% if instance.release_config.can_publish_to_release %}
                     <li>
-                        <input type="submit" name="wssp-actionrelease-publish-release" value="{% trans "Publish To A Release" %}" class="button">
+                        <button type="submit" name="wssp-actionrelease-publish-release" class="button">{% trans "Publish To A Release" %}</button>
                     </li>
                     <li>
-                        <input type="submit" name="wssp-actionrelease-unpublish-release" value="{% trans "Unpublish From A Release" %}" class="button">
+                        <button type="submit" name="wssp-actionrelease-unpublish-release" class="button">{% trans "Unpublish From A Release" %}</button>
                     </li>
                 {% endif %}
             {% endif %}
