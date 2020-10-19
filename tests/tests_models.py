@@ -42,7 +42,7 @@ class WSSPContentReleaseTests(WagtailPageTests):
 
     def test_init(self):
         """ test_str """
-        self.assertEqual(str(self.content_release), '[[site1]] 0.1 - release1__PENDING')
+        self.assertEqual(str(self.content_release), '[[site1]] 0.1 - release1__PREVIEW')
         self.assertTrue(WSSPContentRelease.get_panel_field_from_panels([], None) is None)
 
 

@@ -25,17 +25,24 @@ class ReleaseButtonHelper(ButtonHelper):
         btns = ButtonHelper.get_buttons_for_obj(self, obj, exclude=None, classnames_add=None,
                                                 classnames_exclude=None)
 
-        if obj == obj.__class__.objects.live(site_code=obj.site_code):
-            pass
-        elif not obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
+        if obj.status == 0:
             btns.insert(1, self.detail_revision_button(obj, ['button'], classnames_exclude))
-            if obj.status >= 1 and obj.publish_datetime is not None:
-                btns.insert(2, self.unfreeze_button(obj, ['button'], classnames_exclude))
-            else:
-                btns.insert(2, self.set_live_revision_button(obj, ['button'], classnames_exclude))
-        elif obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
-            btns.insert(1, self.archive_revision_button(obj, ['button'], classnames_exclude))
-            btns.insert(2, self.restore_button(obj, ['button'], classnames_exclude))
+            btns.insert(2, self.set_stage_revision_button(obj, ['button'], classnames_exclude))
+        elif obj.status == 1:
+            btns.insert(1, self.detail_revision_button(obj, ['button'], classnames_exclude))
+            btns.insert(2, self.set_live_revision_button(obj, ['button'], classnames_exclude))
+        # try:
+        #     obj.__class__.objects.live(site_code=obj.site_code)
+        # except:
+        #     if not obj.__class__.objects.archived(site_code=obj.site_code).filter(id=obj.id).exists():
+        #         btns.insert(1, self.detail_revision_button(obj, ['button'], classnames_exclude))
+        #         # if obj.status >= 1 and obj.publish_datetime is not None:
+        #         #     btns.insert(2, self.unfreeze_button(obj, ['button'], classnames_exclude))
+        #         # else:
+        #         #     btns.insert(2, self.set_live_revision_button(obj, ['button'], classnames_exclude))
+        #     elif obj.__class__.objects.archived(site_code=obj.site_code).filter(id=obj.id).exists():
+        #         # btns.insert(1, self.archive_revision_button(obj, ['button'], classnames_exclude))
+        #         btns.insert(2, self.restore_button(obj, ['button'], classnames_exclude))
         return btns
 
     def create_button(self, label, title, url, classnames_add=None, classnames_exclude=None):
@@ -61,6 +68,15 @@ class ReleaseButtonHelper(ButtonHelper):
         return self.create_button('detail', 'Detail updated pages for this release', url,
                                   classnames_add, classnames_exclude)
 
+    def set_stage_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
+        """ set_stage_revision_button """
+        url = reverse(
+            'wagtailsnapshotpublisher_admin:release_set_stage_detail',
+            kwargs={'release_id': obj.pk},
+        )
+        return self.create_button('set stage', 'Set this release stage', url, classnames_add,
+                                  classnames_exclude)
+
     def set_live_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
         """ set_live_revision_button """
         url = reverse(
@@ -70,12 +86,12 @@ class ReleaseButtonHelper(ButtonHelper):
         return self.create_button('set live', 'Set this release live', url, classnames_add,
                                   classnames_exclude)
 
-    def archive_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
-        """ archive_revision_button """
-        url = reverse('wagtailsnapshotpublisher_admin:release_archive',
-                      kwargs={'release_id': obj.pk})
-        return self.create_button('archive', 'Archive this release', url, classnames_add,
-                                  classnames_exclude)
+    # def archive_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
+    #     """ archive_revision_button """
+    #     url = reverse('wagtailsnapshotpublisher_admin:release_archive',
+    #                   kwargs={'release_id': obj.pk})
+    #     return self.create_button('archive', 'Archive this release', url, classnames_add,
+    #                               classnames_exclude)
 
     def restore_button(self, obj, classnames_add=None, classnames_exclude=None):
         """ restore_button """
@@ -83,11 +99,11 @@ class ReleaseButtonHelper(ButtonHelper):
                       kwargs={'release_id': obj.pk})
         return self.create_button('restore', 'Restore', url, classnames_add, classnames_exclude)
 
-    def unfreeze_button(self, obj, classnames_add=None, classnames_exclude=None):
-        """ unfreeze_button """
-        url = reverse('wagtailsnapshotpublisher_admin:release_unfreeze',
-                      kwargs={'release_id': obj.pk})
-        return self.create_button('unfreeze', 'Unfreeze', url, classnames_add, classnames_exclude)
+    # def unfreeze_button(self, obj, classnames_add=None, classnames_exclude=None):
+    #     """ unfreeze_button """
+    #     url = reverse('wagtailsnapshotpublisher_admin:release_unfreeze',
+    #                   kwargs={'release_id': obj.pk})
+    #     return self.create_button('unfreeze', 'Unfreeze', url, classnames_add, classnames_exclude)
 
 
 class ReleaseAdminCreateView(CreateView):
@@ -114,13 +130,21 @@ class ReleaseAdmin(ModelAdmin):
 
     def get_extra_attrs_for_row(self, obj, context):
         """ get_extra_attrs_for_row """
-        classname = ''
-        if obj == obj.__class__.objects.live(site_code=obj.site_code):
+        classname = '' 
+        if obj.status == 1:
+            classname = 'is-stage'
+        elif obj.status == 2:
             classname = 'is-live'
-        elif obj.__class__.objects.lives(site_code=obj.site_code).filter(id=obj.id).exists():
-            classname = 'was-live'
-        elif obj.status == 1 and obj.publish_datetime is not None:
-            classname = 'is-frozen'
+        elif obj.status == 3:
+            classname = 'is-archived'
+        # try:
+        #     obj.__class__.objects.live(site_code=obj.site_code)
+        #     classname = 'is-live'
+        # except obj.__class__.DoesNotExist:
+        #     if obj.__class__.objects.archived(site_code=obj.site_code).filter(id=obj.id).exists():
+        #         classname = 'was-live'
+        # elif obj.status == 1 and obj.publish_datetime is not None:
+        #     classname = 'is-frozen'
 
         return {
             'class': classname,
@@ -135,7 +159,7 @@ class ReleaseAdmin(ModelAdmin):
 
     def get_queryset(self, request):
         """ get_queryset """
-        return super(ReleaseAdmin, self).get_queryset(request).exclude(status=2)
+        return super(ReleaseAdmin, self).get_queryset(request)
 
     def get_edit_handler(self, instance, request):
         """ get_edit_handler """

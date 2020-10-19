@@ -34,18 +34,41 @@ DATETIME_FORMAT='%Y-%m-%d %H:%M'
 #
 def get_releases(request, site_code):
     """ get_releases """
-    time_now = timezone.now()
-    logger.info('Getting releases for site code %s after %s', site_code, time_now.strftime(DATETIME_FORMAT))
+    # time_now = timezone.now()
+    # logger.info('Getting releases for site code %s after %s', site_code, time_now.strftime(DATETIME_FORMAT))
+    # response = list_live_and_upcoming_content_releases(site_code, 1, time_now) # Status FROZEN = 1
+
+    # if response['status'] == 'success':
+    #     releases = list(response['content'].values('uuid', 'title', 'publish_datetime', 'is_live'))
+    #     logger.info('Releases are %s', releases)
+    # else:
+    #     return response
+
+    live_release = None
+    stage_release = None
     publisher_api = PublisherAPI()
-    response = list_live_and_upcoming_content_releases(site_code, 1, time_now) # Status FROZEN = 1
 
+    response = publisher_api.get_live_content_release(site_code)
     if response['status'] == 'success':
-        releases = list(response['content'].values('uuid', 'title', 'publish_datetime', 'is_live'))
-        logger.info('Releases are %s', releases)
-    else:
-        return response
+        live_release = {
+            'uuid': response['content'].uuid,
+            'title': response['content'].title,
+            'publish_datetime': response['content'].publish_datetime,
+        }
 
-    return JsonResponse(releases, safe=False)
+    response = publisher_api.get_stage_content_release(site_code)
+    print(response)
+    if response['status'] == 'success':
+        stage_release = {
+            'uuid': response['content'].uuid,
+            'title': response['content'].title,
+            'publish_datetime': response['content'].publish_datetime,
+        }
+
+    return JsonResponse({
+        'stage': stage_release,
+        'live': live_release,
+    }, safe=False)
 
 
 def list_live_and_upcoming_content_releases(site_code, status=None, after=None):
@@ -192,7 +215,7 @@ def preview_instance(request, content_app, content_class, content_id, preview_mo
     return JsonResponse(data)
 
 
-def compare_release(request, release_id, release_id_to_compare_to=None, set_live_button=False):
+def compare_release(request, release_id, release_id_to_compare_to=None, set_live_button=False, set_stage_button=False):
     """ compare_release """
     publisher_api = PublisherAPI()
     release = WSSPContentRelease.objects.get(id=release_id)
@@ -205,7 +228,7 @@ def compare_release(request, release_id, release_id_to_compare_to=None, set_live
         if frozen_releases_form.is_valid():
             # redirect to compare with this release
             release_id_to_compare_to = frozen_releases_form.cleaned_data['releases']
-            return release_detail(request, release_id, set_live_button, release_id_to_compare_to.id)
+            return release_detail(request, release_id, set_live_button, set_stage_button, release_id_to_compare_to.id)
 
     if request.method == 'POST' and release_id_to_compare_to is None:
         publish_release_form = PublishReleaseForm(request.POST)
@@ -285,10 +308,11 @@ def compare_release(request, release_id, release_id_to_compare_to=None, set_live
     }
 
 
-def release_detail(request, release_id, set_live_button=False, release_id_to_compare_to=None):
-    details = compare_release(request, release_id, release_id_to_compare_to, set_live_button)
+def release_detail(request, release_id, set_live_button=False, set_stage_button=False, release_id_to_compare_to=None):
+    details = compare_release(request, release_id, release_id_to_compare_to, set_live_button, set_stage_button)
     details.update({
         'set_live_button': set_live_button,
+        'set_stage_button': set_stage_button,
     })
     return render(request, 'wagtailadmin/release/detail.html', details)
 
@@ -316,18 +340,61 @@ def release_set_live(request, release_id, publish_datetime=None, set_live_button
         release.publisher = request.user
         release.save()
 
+    # if publish_datetime:
+    #     logger.info('Setting release %s live at %s', release.uuid, publish_datetime)
+    #     response = publisher_api.freeze_content_release(release.site_code, release.uuid,
+    #                                                     publish_datetime)
+    # else:
+    logger.info('Setting release %s live immediately', release.uuid)
+    response = publisher_api.set_live_content_release(release.site_code, release.uuid)
+
+    print(release)
+    print(response)
+
+    # if response['status'] != 'success':
+    #     raise Http404(response['error_msg'])
+
+    WSSPContentRelease.objects.live(
+        site_code=release.site_code,
+    )
+    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+
+
+def release_set_stage(request, release_id, publish_datetime=None, set_stage_button=False):
+    """ release_set_stage """
+    if not publish_datetime:
+        if request and request.POST:
+            form = PublishReleaseForm(request.POST)
+            if form.is_valid():
+                if form.cleaned_data['publish_type'] == 'now':
+                    # Will publish immediately.
+                    publish_datetime = None
+                else:
+                    publish_datetime = form.cleaned_data['publish_datetime']
+            else:
+                logger.debug('Set stage form is invalid')
+
+    publisher_api = PublisherAPI()
+    release = WSSPContentRelease.objects.get(id=release_id)
+    response = None
+
+    # save publisher user in release
+    if request:
+        release.publisher = request.user
+        release.save()
+
     if publish_datetime:
-        logger.info('Setting release %s live at %s', release.uuid, publish_datetime)
+        logger.info('Setting release %s stage at %s', release.uuid, publish_datetime)
         response = publisher_api.freeze_content_release(release.site_code, release.uuid,
                                                         publish_datetime)
     else:
-        logger.info('Setting release %s live immediately', release.uuid)
-        response = publisher_api.set_live_content_release(release.site_code, release.uuid)
+        logger.info('Setting release %s stage immediately', release.uuid)
+        response = publisher_api.set_stage_content_release(release.site_code, release.uuid)
 
     if response['status'] != 'success':
         raise Http404(response['error_msg'])
 
-    WSSPContentRelease.objects.live(
+    WSSPContentRelease.objects.stage(
         site_code=release.site_code,
     )
     return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))

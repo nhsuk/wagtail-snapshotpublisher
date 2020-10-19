@@ -32,6 +32,8 @@
         {% if frozen_releases_form %}
             {% if set_live_button %}
                 <form action="{% url 'wagtailsnapshotpublisher_admin:release_set_live_detail' release.id %}" method="post">
+            {% elif set_stage_button %}
+                <form action="{% url 'wagtailsnapshotpublisher_admin:release_set_stage_detail' release.id %}" method="post">
             {% else %}
                 <form action="{% url 'wagtailsnapshotpublisher_admin:release_detail' release.id %}" method="post">
             {% endif %}
@@ -185,6 +187,11 @@
                     {% endfor %}
                 </ul>
                 <input class="button" type="submit" value="Set Live">
+            </form>
+        {% elif set_stage_button %}
+            <form action="{% url 'wagtailsnapshotpublisher_admin:release_set_stage' release.id %}" method="post">
+                {% csrf_token %}
+                <input class="button" type="submit" value="Set Stage">
             </form>
         {% endif %}
     </div>

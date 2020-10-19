@@ -11,6 +11,7 @@
         "use_current_live_as_base_release": false,
         "base_release": null,
         "is_live": false,
+        "is_stage": false,
         "release_documents": []
     }
 }, {
@@ -29,11 +30,12 @@
         "version": null,
         "title": "Test2 Current Release",
         "site_code": "site1",
-        "status": 0,
+        "status": 1,
         "publish_datetime": null,
         "use_current_live_as_base_release": false,
         "base_release": null,
         "is_live": false,
+        "is_stage": true,
         "release_documents": []
     }
 }, {
@@ -49,14 +51,15 @@
     "pk": 3,
     "fields": {
         "uuid": "7c02c9a3-89c6-451f-b78c-219deac2a964",
-        "version": null,
+        "version": "1.0",
         "title": "Test3 Current Release",
         "site_code": "site1",
-        "status": 0,
-        "publish_datetime": null,
+        "status": 2,
+        "publish_datetime": "2019-05-28T15:11:44.495Z",
         "use_current_live_as_base_release": false,
         "base_release": null,
-        "is_live": false,
+        "is_live": true,
+        "is_stage": false,
         "release_documents": []
     }
 }, {
