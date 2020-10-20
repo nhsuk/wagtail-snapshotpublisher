@@ -109,13 +109,13 @@ $(function() {
             $(this).show();
             const optionText = $(this).text();
 
-            // check if pending release
+            // check if preview release
             if(remove_live_release) {
                 const optionStatusRegExp = /.+(__.+)/;
                 const statusMatch = optionStatusRegExp.exec(optionText);
                 if (statusMatch) {
-                    if (optionText.indexOf('__PENDING') !== -1) {
-                        const newText = optionText.replace('__PENDING', '');
+                    if (optionText.indexOf('__PREVIEW') !== -1) {
+                        const newText = optionText.replace('__PREVIEW', '');
                         $(this).text(newText);
                     } else {
                         $(this).remove();

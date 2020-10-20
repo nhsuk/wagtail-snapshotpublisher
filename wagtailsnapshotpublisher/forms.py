@@ -43,25 +43,25 @@ class FrozenReleasesForm(forms.Form):
         """ __init__ """
         super().__init__(*args, **kwargs)
         publish_datetime = timezone.now()
-        live_release = WSSPContentRelease.objects.live(site_code=site_code)
 
         # get releases
         self.fields['releases'].queryset = WSSPContentRelease.objects.filter(
             site_code=site_code,
-            # publish_datetime__gte=live_release_publish_datetime,
             status=1,
         ).exclude(
             publish_datetime=None,
         ).order_by('publish_datetime', 'title')
 
-        # get live_release  publish_datetime
-        # live_release_publish_datetime = None
-        if live_release:
+        try:
+            live_release = WSSPContentRelease.objects.live(site_code=site_code)
+
+            # get live_release  publish_datetime
+            # live_release_publish_datetime = None
             self.fields['releases'].queryset = self.fields['releases'].queryset.filter(
                 publish_datetime__gte=live_release.publish_datetime,
             )
-            # live_release_publish_datetime = live_release.publish_datetime
-
-        # if only live release ignore it as it become the default comparaison
-        if live_release and self.fields['releases'].queryset.count() == 1:
-            self.fields['releases'].queryset = None
+            # if only live release ignore it as it become the default comparaison
+            if self.fields['releases'].queryset.count() == 1:
+                self.fields['releases'].queryset = None
+        except WSSPContentRelease.DoesNotExist:
+            pass

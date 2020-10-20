@@ -1,3 +1,11 @@
+.listing tbody tr.is-stage {
+    background: #b6ebed;
+}
+
+.listing tbody tr.is-stage:hover {
+    background: #a7dddf;
+}
+
 .listing tbody tr.is-live {
     background: #B6EDC8;
 }
@@ -6,18 +14,18 @@
     background: rgb(206, 237, 217);
 }
 
-.listing tbody tr.was-live {
+/* .listing tbody tr.was-live {
     background: #bbbbbb;
 }
 
 .listing tbody tr.was-live:hover {
     background: #d1d1d1;
-}
+} */
 
-.listing tbody tr.is-frozen {
+.listing tbody tr.is-archived {
     background: #fff8ba;
 }
 
-.listing tbody tr.is-frozen:hover {
+.listing tbody tr.is-archived:hover {
     background: #fffbd3;
 }
