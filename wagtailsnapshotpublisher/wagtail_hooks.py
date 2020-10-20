@@ -27,7 +27,10 @@ class ReleaseButtonHelper(ButtonHelper):
 
         if obj.status == 0:
             btns.insert(1, self.detail_revision_button(obj, ['button'], classnames_exclude))
-            btns.insert(2, self.set_stage_revision_button(obj, ['button'], classnames_exclude))
+            try:
+                WSSPContentRelease.objects.stage(obj.site_code)
+            except WSSPContentRelease.DoesNotExist:
+                btns.insert(2, self.set_stage_revision_button(obj, ['button'], classnames_exclude))
         elif obj.status == 1:
             btns.insert(1, self.detail_revision_button(obj, ['button'], classnames_exclude))
             btns.insert(2, self.set_live_revision_button(obj, ['button'], classnames_exclude))
@@ -74,7 +77,7 @@ class ReleaseButtonHelper(ButtonHelper):
             'wagtailsnapshotpublisher_admin:release_set_stage_detail',
             kwargs={'release_id': obj.pk},
         )
-        return self.create_button('set stage', 'Set this release stage', url, classnames_add,
+        return self.create_button('Stage', 'Stage this release', url, classnames_add,
                                   classnames_exclude)
 
     def set_live_revision_button(self, obj, classnames_add=None, classnames_exclude=None):
