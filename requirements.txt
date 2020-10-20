@@ -15,4 +15,4 @@ jsonschema
 safety
 
 # django-snapshotpublisher==0.3
-git+https://github.com/nhsuk/django-snapshotpublisher@af33b4927c800ad9633816776120e8c986faaf00#egg=django-snapshotpublisher
+git+https://github.com/nhsuk/django-snapshotpublisher#egg=django-snapshotpublisher
