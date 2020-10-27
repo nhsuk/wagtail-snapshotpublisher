@@ -87,8 +87,10 @@ def list_live_and_upcoming_content_releases(site_code, status=None, after=None):
 def get_content_details(site_code, release_uuid, content_type, content_key):
     """ get_content_details """
     publisher_api = PublisherAPI()
+
+    content_release = None
+
     try:
-        content_release = None
         if release_uuid:
             # get ContentRelease
             content_release = WSSPContentRelease.objects.get(
@@ -107,12 +109,34 @@ def get_content_details(site_code, release_uuid, content_type, content_key):
     except WSSPContentRelease.DoesNotExist:
         pass
 
+    # Fetch document from the content release.
     response = publisher_api.get_document_from_content_release(
         site_code,
         release_uuid,
         content_key,
         content_type,
     )
+
+    base_content_release = None
+    if response['status'] == 'error' and response['error_code'] == 'release_document_does_not_exist':
+        # Release doc not found, try in the base release for preview releases.
+        if content_release.status == 0:
+            if content_release.use_current_live_as_base_release:
+                response = publisher_api.get_live_content_release(site_code)
+                if response['status'] == 'success':
+                    release = response['content']
+                    base_content_release = WSSPContentRelease.objects.get(id=release.id)
+            else:
+                base_content_release = content_release.base_release
+
+    if base_content_release != None:
+        # Fetch document from the base content release if available (should only happen for preview releases).
+        response = publisher_api.get_document_from_content_release(
+            site_code,
+            base_content_release.uuid,
+            content_key,
+            content_type,
+        )
 
     if response['status'] == 'success':
         data = json.loads(response['content'].document_json)
