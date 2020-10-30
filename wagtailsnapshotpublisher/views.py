@@ -420,6 +420,25 @@ def release_set_stage(request, release_id, publish_datetime=None, set_stage_butt
     return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 
+def release_unset_stage(request, release_id):
+    publisher_api = PublisherAPI()
+    release = WSSPContentRelease.objects.get(id=release_id)
+    response = None
+
+    # save publisher user in release
+    if request:
+        release.publisher = request.user
+        release.save()
+
+    logger.info('Setting release %s stage immediately', release.uuid)
+    response = publisher_api.unset_stage_content_release(release.site_code, release.uuid)
+
+    if response['status'] != 'success':
+        raise Http404(response['error_msg'])
+
+    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+
+
 def release_archive(request, release_id):
     """ release_archive """
     publisher_api = PublisherAPI()

@@ -137,15 +137,14 @@ class WSSPContentRelease(ContentRelease):
 
     def copy_document_release_ref_from_baserelease(self):
         """ get parent release """
-        base_release = self.base_release
         if self.use_current_live_as_base_release:
-            base_release = self.__class__.objects.filter(
+            self.base_release = self.__class__.objects.filter(
                 publish_datetime__lt=self.publish_datetime, site_code=self.site_code).order_by(
                     '-publish_datetime').first()
 
-        if base_release:
+        if self.base_release:
             publisher_api = PublisherAPI()
-            dynamic_documents = base_release.release_documents.filter(
+            dynamic_documents = self.base_release.release_documents.filter(
                 parameters__key='have_dynamic_elements',
                 parameters__content='True',
             )
@@ -183,7 +182,7 @@ class WSSPContentRelease(ContentRelease):
                     parameters = None
                     response = publisher_api.get_document_extra_from_content_release(
                         self.site_code,
-                        base_release.uuid,
+                        self.base_release.uuid,
                         dynamic_document.document_key,
                         dynamic_document.content_type,
                     )
@@ -280,7 +279,7 @@ def fix_versions_conflict(sender, instance, *args, **kwargs):
 @receiver(post_save, sender=WSSPContentRelease)
 def load_dynamic_element(sender, instance, *args, **kwargs):
     """ load_dynamic_element """
-    if instance.is_live:
+    if instance.is_stage:
         publisher_api = PublisherAPI()
 
         # get all ReleaseContent with dynamic element
