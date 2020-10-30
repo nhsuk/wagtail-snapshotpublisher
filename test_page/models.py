@@ -127,7 +127,7 @@ class TestPage(PageWithRelease):
         ('dynamictestpage_block', DynamicTestPageBlock('test_page.TestPage')),
     ], null=True)
 
-    content_panels = Page.content_panels + [
+    content_panels = PageWithRelease.content_panels + [
         FieldPanel('name1'),
         FieldPanel('name2'),
         StreamFieldPanel('body'),

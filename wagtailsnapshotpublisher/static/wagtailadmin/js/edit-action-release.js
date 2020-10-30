@@ -32,15 +32,16 @@ $(function() {
         });
 
         $("#wssp-actionliverelease-publish-live-release").click(function (e) {
-            if($('#id_publish_to_live_release').length) {
-                $('#id_publish_to_live_release').prop('checked', true);
-            } else {
-                if(!$('#live-release-option').length) {
-                    $('select#id_content_release').append($('<option>', {value: liveReleaveId, text:'Live Release', id: 'live-release-option'}));
-                    $('#id_content_release').val(liveReleaveId);
-                }
-            }
-            $('#id_content_release').closest("form").submit();
+            $('#id_publish_to_live_release').prop('checked', true);
+            // if($('#id_publish_to_live_release').length) {
+            //     $('#id_publish_to_live_release').prop('checked', true);
+            // } else {
+            //     if(!$('#live-release-option').length) {
+            //         $('select#id_content_release').append($('<option>', {value: liveReleaveId, text:'Live Release', id: 'live-release-option'}));
+            //         $('#id_content_release').val(liveReleaveId);
+            //     }
+            // }
+            // $('#id_content_release').closest("form").submit();
         }); 
     }
 

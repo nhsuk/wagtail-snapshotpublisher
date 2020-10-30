@@ -351,6 +351,7 @@ class WithRelease(models.Model):
         on_delete=models.SET_NULL,
         limit_choices_to=Q(status=0) | Q(status=1),
     )
+    publish_to_live_release = models.BooleanField(default=False)
 
     class Meta:
         """ Meta """
@@ -453,7 +454,7 @@ class WithRelease(models.Model):
 class ModelWithRelease(WithRelease):
     """ ModelWithRelease """
     site_code = models.SlugField(max_length=100, blank=True, null=True)
-    publish_to_live_release = models.BooleanField(default=False)
+    # publish_to_live_release = models.BooleanField(default=False)
 
     panels = [
         FieldPanel('site_code', widget=site_code_widget),
@@ -512,6 +513,11 @@ class ModelWithRelease(WithRelease):
 
 
 class PageWithRelease(Page, WithRelease):
+
+    content_panels = Page.content_panels + [
+        FieldPanel('publish_to_live_release'),
+    ]
+
     """ PageWithRelease """
     class Meta:
         """ Meta """
@@ -546,5 +552,32 @@ class PageWithRelease(Page, WithRelease):
             # else:
             page = revision.as_page_object()
             self.publish_to_release(page, assigned_release, {'revision_id': revision.id})
+        elif self.publish_to_live_release:
+            publisher_api = PublisherAPI()
+            self.publish_to_live_release = False
+            live_content_release = WSSPContentRelease.objects.live(site_code=self.site_code)
+            # TO DO
+            # create new release
+            new_content_release = WSSPContentRelease(
+                author=user,
+                publisher=user,
+                use_current_live_as_base_release=True,
+                # TO DO
+                # ADD TITLE, VERSION, ...
+            )
+            new_content_release.save()
+
+            # save revision to new release
+            page = revision.as_page_object()
+            self.publish_to_release(page, new_content_release, {'revision_id': revision.id})
+
+            # stage
+            response = publisher_api.set_stage_content_release(new_content_release.site_code, new_content_release.uuid)
+            
+            # live
+            response = publisher_api.set_live_content_release(
+                new_content_release.site_code,
+                new_content_release.uuid,
+            )
 
         return revision
