@@ -2,6 +2,7 @@
 .. module:: wagtailsnapshotpublisher.models
 """
 
+import logging
 import json
 import re
 
@@ -29,6 +30,8 @@ from djangosnapshotpublisher.publisher_api import PublisherAPI
 from .panels import ReadOnlyPanel
 from .utils import get_from_dict, set_in_dict, del_in_dict, get_dynamic_element_keys
 from .signals import content_was_published
+
+logger = logging.getLogger('django')
 
 site_code_widget = None
 
@@ -414,7 +417,9 @@ class WithRelease(models.Model):
             )
 
             if response['status'] == 'success':
-                content_was_published.send(sender=self.__class__, site_id=content_release.site_code, release_id=content_release.uuid, title=data.get("title"), content=json_data, page=self)
+                if serializer_item['type'] == 'cover':
+                    data['full_url'] = serializer_item['key']
+                    content_was_published.send(sender=self.__class__, site_id=content_release.site_code, release_id=content_release.uuid, title=data.get("title"), content=data, page=self)
             else:
                 raise Exception(response['error_msg'])
 
