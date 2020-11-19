@@ -17,6 +17,7 @@ from django.core import serializers
 from django.db.models import Q
 
 from wagtail.core.models import Page, PageRevision
+from wagtail.admin import messages
 
 from djangosnapshotpublisher.publisher_api import PublisherAPI
 from djangosnapshotpublisher.models import ContentRelease
@@ -24,6 +25,7 @@ from djangosnapshotpublisher.models import ContentRelease
 from .models import WSSPContentRelease, document_load_dynamic_elements
 from .forms import PublishReleaseForm, FrozenReleasesForm
 from .utils import get_dynamic_element_keys
+from .signals import release_was_staged, reindex_release
 
 logger = logging.getLogger('django')
 
@@ -340,6 +342,14 @@ def release_detail(request, release_id, set_live_button=False, set_stage_button=
     return render(request, 'wagtailadmin/release/detail.html', details)
 
 
+def release_reindex(request, release_id):
+    # Send reindex_release signal.
+    release = WSSPContentRelease.objects.get(id=release_id)
+    reindex_release.send(sender=release.__class__, release=release)
+    messages.success(request, 'Indexer command sent')
+    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+
+
 def release_set_live(request, release_id, publish_datetime=None, set_live_button=False):
     """ release_set_live """
     if not publish_datetime:
@@ -413,6 +423,9 @@ def release_set_stage(request, release_id, publish_datetime=None, set_stage_butt
 
     if response['status'] != 'success':
         raise Http404(response['error_msg'])
+
+    # Send release_was_staged signal.
+    release_was_staged.send(sender=release.__class__, release=release)
 
     WSSPContentRelease.objects.stage(
         site_code=release.site_code,
