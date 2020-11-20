@@ -28,6 +28,8 @@ urlpatterns = [
 
     path('wagtailsnapshotpublisher/wsspcontentrelease/details/<int:release_id>/',
          views.release_detail, name='release_detail'),
+    path('wagtailsnapshotpublisher/wsspcontentrelease/reindex/<int:release_id>/',
+         views.release_reindex, name='reindex'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/setstage/<int:release_id>/',
          views.release_set_stage, name='release_set_stage'),
     path('wagtailsnapshotpublisher/wsspcontentrelease/setstagedetails/<int:release_id>/',
