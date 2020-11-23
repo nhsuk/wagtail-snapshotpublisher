@@ -393,7 +393,8 @@ class WithRelease(models.Model):
             have_dynamic_elements = False
             serialized_page = serializer_item['class'](instance=self)
             data = serialized_page.data
-
+            if serializer_item['type'] == 'page':
+                data['meta']['full_path'] = serializer_item['key']
             dynamic_element_keys = get_dynamic_element_keys(data)
             if dynamic_element_keys:
                 extra_parameters.update({
@@ -417,8 +418,8 @@ class WithRelease(models.Model):
             )
 
             if response['status'] == 'success':
-                if serializer_item['type'] == 'cover':
-                    data['full_url'] = serializer_item['key']
+                if serializer_item['type'] == 'page':
+                    data['full_path'] = serializer_item['key']
                     content_was_published.send(sender=self.__class__, site_id=content_release.site_code, release_id=content_release.uuid, title=data.get("title"), content=data, page=self)
             else:
                 raise Exception(response['error_msg'])
