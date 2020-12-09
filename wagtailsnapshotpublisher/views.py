@@ -178,7 +178,7 @@ def unpublish(request, content_app, content_class, content_id, release_id):
     model_class = apps.get_model(content_app, content_class)
     instance = get_object_or_404(model_class, id=content_id)
     instance.unpublish_or_delete_from_release(release_id)
-    return redirect('/admin/{}/{}/'.format(content_app, content_class))
+    return redirect(absolute_path(request, content_app, content_class))
 
 
 def remove_page(request, page_id, release_id, recursively=False):
@@ -198,7 +198,7 @@ def remove(request, content_app, content_class, content_id, release_id):
     model_class = apps.get_model(content_app, content_class)
     instance = get_object_or_404(model_class, id=content_id)
     instance.unpublish_or_delete_from_release(release_id, False, True)
-    return redirect('/admin/{}/{}/'.format(content_app, content_class))
+    return redirect(absolute_path(request, content_app, content_class))
 
 
 def preview_model(request, content_app, content_class, content_id, preview_mode='default',
@@ -317,7 +317,7 @@ def compare_release(request, release_id, release_id_to_compare_to=None, set_live
                 changed_pages.append(item)
         else:
             extra_contents.append(item)
-    
+
     return {
         'comparison': comparison,
         'added_pages': added_pages,
@@ -347,7 +347,7 @@ def release_reindex(request, release_id):
     release = WSSPContentRelease.objects.get(id=release_id)
     reindex_release.send(sender=release.__class__, release=release)
     messages.success(request, 'Indexer command sent')
-    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+    return redirect(absolute_path(request, 'wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 
 def release_set_live(request, release_id, publish_datetime=None, set_live_button=False):
@@ -387,7 +387,7 @@ def release_set_live(request, release_id, publish_datetime=None, set_live_button
     # if response['status'] != 'success':
     #     raise Http404(response['error_msg'])
 
-    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+    return redirect(absolute_path(request, 'wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 
 def release_set_stage(request, release_id, publish_datetime=None, set_stage_button=False):
@@ -430,7 +430,7 @@ def release_set_stage(request, release_id, publish_datetime=None, set_stage_butt
     WSSPContentRelease.objects.stage(
         site_code=release.site_code,
     )
-    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+    return redirect(absolute_path(request, 'wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 
 def release_unset_stage(request, release_id):
@@ -449,7 +449,7 @@ def release_unset_stage(request, release_id):
     if response['status'] != 'success':
         raise Http404(response['error_msg'])
 
-    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+    return redirect(absolute_path(request, 'wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 
 def release_archive(request, release_id):
@@ -459,7 +459,7 @@ def release_archive(request, release_id):
     response = publisher_api.archive_content_release(release.site_code, release.uuid)
     if response['status'] != 'success':
         raise Http404(response['error_msg'])
-    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+    return redirect(absolute_path(request, 'wagtailsnapshotpublisher', 'wsspcontentrelease'))
 
 
 def get_document_release(request, site_code, content_release_uuid=None, content_type='content',
@@ -513,4 +513,11 @@ def release_unfreeze(request, release_id):
     except WSSPContentRelease.DoesNotExist:
         raise Http404(_('This release cannot be restore'))
 
-    return redirect('/admin/{}/{}/'.format('wagtailsnapshotpublisher', 'wsspcontentrelease'))
+    return redirect(absolute_path(request, 'wagtailsnapshotpublisher', 'wsspcontentrelease'))
+
+def absolute_path(request, content_app, content_class):
+    admin = request.path
+    if admin.startswith('/'):
+        admin = admin.lstrip('/')
+    admin = admin.split('/')[0]
+    return '/{}/{}/{}/'.format(admin, content_app, content_class)
